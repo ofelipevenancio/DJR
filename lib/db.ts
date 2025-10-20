@@ -20,16 +20,16 @@ const sql = neon(getDatabaseUrl())
 
 // Database schema uses snake_case Portuguese names
 export interface DbTransaction {
-  id: string
+  id: number
   pedido: string
   data: string
   empresa: string
   cliente: string
   valor_vendido: number
-  nf_numeros: string
+  nf: string
   total_nf: number
   total_recebido: number
-  forma_pagamento: string | null
+  forma_recebimento: string | null
   banco_conta: string | null
   observacoes: string
   status: string
@@ -57,16 +57,16 @@ export interface Transaction {
 // Convert database format to frontend format
 function dbToFrontend(dbTx: DbTransaction): Transaction {
   return {
-    id: dbTx.id,
+    id: dbTx.id.toString(),
     orderNumber: dbTx.pedido,
     saleDate: dbTx.data,
     company: dbTx.empresa,
     client: dbTx.cliente,
     saleValue: Number(dbTx.valor_vendido),
-    invoiceNumbers: dbTx.nf_numeros,
+    invoiceNumbers: dbTx.nf,
     invoiceTotal: Number(dbTx.total_nf),
     totalReceived: Number(dbTx.total_recebido),
-    paymentMethod: dbTx.forma_pagamento || "",
+    paymentMethod: dbTx.forma_recebimento || "",
     bankAccount: dbTx.banco_conta || "",
     observations: dbTx.observacoes,
     status: dbTx.status as Transaction["status"],
@@ -74,26 +74,57 @@ function dbToFrontend(dbTx: DbTransaction): Transaction {
 }
 
 // Convert frontend format to database format
-function frontendToDb(tx: Omit<Transaction, "id" | "status">, id: string, status: string): DbTransaction {
+function frontendToDb(
+  tx: Omit<Transaction, "id" | "status">,
+  status: string,
+): Omit<DbTransaction, "id" | "created_at" | "updated_at"> {
   return {
-    id,
     pedido: tx.orderNumber,
     data: tx.saleDate,
     empresa: tx.company,
     cliente: tx.client,
     valor_vendido: tx.saleValue,
-    nf_numeros: tx.invoiceNumbers,
+    nf: tx.invoiceNumbers,
     total_nf: tx.invoiceTotal,
     total_recebido: tx.totalReceived,
-    forma_pagamento: tx.paymentMethod || null,
+    forma_recebimento: tx.paymentMethod || null,
     banco_conta: tx.bankAccount || null,
     observacoes: tx.observations,
     status,
   }
 }
 
+async function ensureTableExists() {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id SERIAL PRIMARY KEY,
+        pedido TEXT NOT NULL,
+        data DATE NOT NULL,
+        empresa TEXT NOT NULL,
+        cliente TEXT NOT NULL,
+        valor_vendido DECIMAL(15, 2) DEFAULT 0,
+        nf TEXT,
+        total_nf DECIMAL(15, 2) DEFAULT 0,
+        total_recebido DECIMAL(15, 2) DEFAULT 0,
+        forma_recebimento TEXT,
+        banco_conta TEXT,
+        observacoes TEXT,
+        status TEXT NOT NULL DEFAULT 'Pendente',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+    console.log("[v0] Table 'transactions' verified/created successfully")
+  } catch (error) {
+    console.error("[v0] Error creating table:", error)
+    throw error
+  }
+}
+
 export async function getTransactions(): Promise<Transaction[]> {
   try {
+    await ensureTableExists()
     const result = await sql`SELECT * FROM transactions ORDER BY data DESC, created_at DESC`
     return result.map(dbToFrontend)
   } catch (error) {
@@ -107,20 +138,21 @@ export async function createTransaction(
   status: string,
 ): Promise<Transaction | null> {
   try {
+    await ensureTableExists()
+
     console.log("[v0] Creating transaction with data:", transaction)
-    const id = Date.now().toString()
-    const dbTx = frontendToDb(transaction, id, status)
+    const dbTx = frontendToDb(transaction, status)
 
     console.log("[v0] Converted to DB format:", dbTx)
 
     const result = await sql`
       INSERT INTO transactions (
-        id, pedido, data, empresa, cliente, valor_vendido, nf_numeros, total_nf, 
-        total_recebido, forma_pagamento, banco_conta, observacoes, status
+        pedido, data, empresa, cliente, valor_vendido, nf, total_nf, 
+        total_recebido, forma_recebimento, banco_conta, observacoes, status
       ) VALUES (
-        ${dbTx.id}, ${dbTx.pedido}, ${dbTx.data}, ${dbTx.empresa}, ${dbTx.cliente}, 
-        ${dbTx.valor_vendido}, ${dbTx.nf_numeros}, ${dbTx.total_nf}, ${dbTx.total_recebido}, 
-        ${dbTx.forma_pagamento}, ${dbTx.banco_conta}, ${dbTx.observacoes}, ${dbTx.status}
+        ${dbTx.pedido}, ${dbTx.data}, ${dbTx.empresa}, ${dbTx.cliente}, 
+        ${dbTx.valor_vendido}, ${dbTx.nf}, ${dbTx.total_nf}, ${dbTx.total_recebido}, 
+        ${dbTx.forma_recebimento}, ${dbTx.banco_conta}, ${dbTx.observacoes}, ${dbTx.status}
       )
       RETURNING *
     `
@@ -139,7 +171,7 @@ export async function updateTransaction(
   status: string,
 ): Promise<Transaction | null> {
   try {
-    const dbTx = frontendToDb(transaction, id, status)
+    const dbTx = frontendToDb(transaction, status)
 
     const result = await sql`
       UPDATE transactions 
@@ -149,14 +181,14 @@ export async function updateTransaction(
         empresa = ${dbTx.empresa},
         cliente = ${dbTx.cliente},
         valor_vendido = ${dbTx.valor_vendido},
-        nf_numeros = ${dbTx.nf_numeros},
+        nf = ${dbTx.nf},
         total_nf = ${dbTx.total_nf},
         total_recebido = ${dbTx.total_recebido},
-        forma_pagamento = ${dbTx.forma_pagamento},
+        forma_recebimento = ${dbTx.forma_recebimento},
         banco_conta = ${dbTx.banco_conta},
         observacoes = ${dbTx.observacoes},
         status = ${dbTx.status},
-        updated_at = NOW()
+        updated_at = CURRENT_TIMESTAMP
       WHERE id = ${id}
       RETURNING *
     `
