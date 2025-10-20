@@ -8,23 +8,39 @@ type TimelineChartProps = {
 }
 
 export function TimelineChart({ transactions }: TimelineChartProps) {
-  // Group transactions by month
   const monthlyData = transactions.reduce(
     (acc, t) => {
-      const date = new Date(t.saleDate + "T00:00:00")
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+      try {
+        // Parse date safely
+        let date: Date
+        if (/^\d{4}-\d{2}-\d{2}$/.test(t.saleDate)) {
+          date = new Date(t.saleDate + "T00:00:00")
+        } else {
+          date = new Date(t.saleDate)
+        }
 
-      if (!acc[monthKey]) {
-        acc[monthKey] = { month: monthKey, vendido: 0, recebido: 0 }
+        if (isNaN(date.getTime())) {
+          return acc
+        }
+
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+
+        if (!acc[monthKey]) {
+          acc[monthKey] = { month: monthKey, vendido: 0, recebido: 0 }
+        }
+
+        acc[monthKey].vendido += t.saleValue
+        acc[monthKey].recebido += t.totalReceived
+
+        return acc
+      } catch (error) {
+        console.error("[v0] Error processing date in timeline chart:", t.saleDate, error)
+        return acc
       }
-
-      acc[monthKey].vendido += t.saleValue
-      acc[monthKey].recebido += t.totalReceived
-
-      return acc
     },
     {} as Record<string, { month: string; vendido: number; recebido: number }>,
   )
+  // </CHANGE>
 
   const data = Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month))
 

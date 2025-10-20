@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Search, X, Download, Calendar, Building2, User, FileText, DollarSign } from "lucide-react"
 import type { Transaction } from "@/app/page"
+import { formatDate } from "@/lib/utils"
 
 type ReportsViewProps = {
   transactions: Transaction[]
@@ -94,10 +95,6 @@ export function ReportsView({ transactions }: ReportsViewProps) {
       style: "currency",
       currency: "BRL",
     }).format(value)
-  }
-
-  const formatDate = (date: string) => {
-    return new Date(date + "T00:00:00").toLocaleDateString("pt-BR")
   }
 
   // Calculate summary statistics

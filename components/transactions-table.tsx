@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle2, AlertCircle, Clock, AlertTriangle, Pencil } from "lucide-react"
 import type { Transaction } from "@/app/page"
 import { EditTransactionDialog } from "@/components/edit-transaction-dialog"
+import { formatDate } from "@/lib/utils"
 
 type TransactionsTableProps = {
   transactions: Transaction[]
@@ -65,10 +66,6 @@ export function TransactionsTable({ transactions, onUpdateTransaction }: Transac
       style: "currency",
       currency: "BRL",
     }).format(value)
-  }
-
-  const formatDate = (date: string) => {
-    return new Date(date + "T00:00:00").toLocaleDateString("pt-BR")
   }
 
   return (

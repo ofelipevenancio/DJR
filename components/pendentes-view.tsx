@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Search, X, Calendar, Building2, User, FileText, DollarSign, CheckCircle2, AlertCircle } from "lucide-react"
 import type { Transaction } from "@/app/page"
+import { formatDate } from "@/lib/utils"
 
 type PendentesViewProps = {
   transactions: Transaction[]
@@ -80,10 +81,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
       style: "currency",
       currency: "BRL",
     }).format(value)
-  }
-
-  const formatDate = (date: string) => {
-    return new Date(date + "T00:00:00").toLocaleDateString("pt-BR")
   }
 
   const getStatusBadge = (status: Transaction["status"]) => {
