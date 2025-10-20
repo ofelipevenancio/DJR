@@ -8,6 +8,11 @@ import { PendentesView } from "@/components/pendentes-view"
 import { DashboardView } from "@/components/dashboard-view"
 import { ReportsView } from "@/components/reports-view"
 import { LoginScreen } from "@/components/login-screen"
+import {
+  fetchTransactions,
+  addTransaction as addTransactionAction,
+  editTransaction as editTransactionAction,
+} from "./actions"
 
 export type Transaction = {
   id: string
@@ -28,6 +33,9 @@ export type Transaction = {
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [currentView, setCurrentView] = useState<"transactions" | "pendentes" | "dashboard" | "reports">("transactions")
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
 
   useEffect(() => {
     const authStatus = localStorage.getItem("djr_auth")
@@ -36,6 +44,25 @@ export default function Home() {
     }
     setIsLoading(false)
   }, [])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadTransactions()
+    }
+  }, [isAuthenticated])
+
+  const loadTransactions = async () => {
+    setIsLoadingTransactions(true)
+    try {
+      const data = await fetchTransactions()
+      setTransactions(data)
+      console.log("[v0] Loaded transactions from database:", data.length, "transactions")
+    } catch (error) {
+      console.error("[v0] Error loading transactions:", error)
+    } finally {
+      setIsLoadingTransactions(false)
+    }
+  }
 
   const handleLogin = (email: string, password: string) => {
     localStorage.setItem("djr_auth", "true")
@@ -48,67 +75,29 @@ export default function Home() {
     localStorage.removeItem("djr_user_email")
     setIsAuthenticated(false)
     setCurrentView("transactions")
+    setTransactions([])
   }
 
-  const [currentView, setCurrentView] = useState<"transactions" | "pendentes" | "dashboard" | "reports">("transactions")
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-
-  const addTransaction = (transaction: Omit<Transaction, "id" | "status">) => {
-    const saleValue = transaction.saleValue
-    const totalReceived = transaction.totalReceived
-
-    let status: Transaction["status"]
-
-    if (saleValue === 0 && totalReceived === 0) {
-      status = "pending"
-    } else if (totalReceived === saleValue && saleValue > 0) {
-      status = "received"
-    } else if (totalReceived > 0 && totalReceived < saleValue) {
-      status = "partial"
-    } else if (totalReceived === 0 && saleValue > 0) {
-      status = "pending"
-    } else {
-      status = "divergent"
+  const addTransaction = async (transaction: Omit<Transaction, "id" | "status">) => {
+    try {
+      const result = await addTransactionAction(transaction)
+      if (result) {
+        await loadTransactions() // Reload from database
+      }
+    } catch (error) {
+      console.error("[v0] Error adding transaction:", error)
     }
-
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: Date.now().toString(),
-      status,
-    }
-
-    setTransactions([newTransaction, ...transactions])
   }
 
-  const updateTransaction = (id: string, transaction: Omit<Transaction, "id" | "status">) => {
-    const saleValue = transaction.saleValue
-    const totalReceived = transaction.totalReceived
-
-    let status: Transaction["status"]
-
-    if (saleValue === 0 && totalReceived === 0) {
-      status = "pending"
-    } else if (totalReceived === saleValue && saleValue > 0) {
-      status = "received"
-    } else if (totalReceived > 0 && totalReceived < saleValue) {
-      status = "partial"
-    } else if (totalReceived === 0 && saleValue > 0) {
-      status = "pending"
-    } else {
-      status = "divergent"
+  const updateTransaction = async (id: string, transaction: Omit<Transaction, "id" | "status">) => {
+    try {
+      const result = await editTransactionAction(id, transaction)
+      if (result) {
+        await loadTransactions() // Reload from database
+      }
+    } catch (error) {
+      console.error("[v0] Error updating transaction:", error)
     }
-
-    setTransactions(
-      transactions.map((t) =>
-        t.id === id
-          ? {
-              ...transaction,
-              id,
-              status,
-            }
-          : t,
-      ),
-    )
   }
 
   if (isLoading) {
@@ -131,7 +120,12 @@ export default function Home() {
       <Header currentView={currentView} onViewChange={setCurrentView} onLogout={handleLogout} />
       <main className="flex-1 pt-20 pb-10 px-6">
         <div className="container mx-auto max-w-7xl py-10">
-          {currentView === "transactions" ? (
+          {isLoadingTransactions ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando transações...</p>
+            </div>
+          ) : currentView === "transactions" ? (
             <TransactionsView
               transactions={transactions}
               onAddTransaction={addTransaction}
