@@ -4,53 +4,81 @@ import { getTransactions, createTransaction, updateTransaction, type Transaction
 import { revalidatePath } from "next/cache"
 
 export async function fetchTransactions(): Promise<Transaction[]> {
-  return await getTransactions()
+  try {
+    console.log("[v0] Fetching transactions from database...")
+    const transactions = await getTransactions()
+    console.log("[v0] Fetched transactions:", transactions.length)
+    return transactions
+  } catch (error) {
+    console.error("[v0] Error in fetchTransactions:", error)
+    return []
+  }
 }
 
 export async function addTransaction(transaction: Omit<Transaction, "id" | "status">) {
-  // Calculate status
-  const saleValue = transaction.saleValue
-  const totalReceived = transaction.totalReceived
+  try {
+    console.log("[v0] Adding transaction:", transaction)
 
-  let status: Transaction["status"]
+    // Calculate status
+    const saleValue = transaction.saleValue
+    const totalReceived = transaction.totalReceived
 
-  if (saleValue === 0 && totalReceived === 0) {
-    status = "pending"
-  } else if (totalReceived === saleValue && saleValue > 0) {
-    status = "received"
-  } else if (totalReceived > 0 && totalReceived < saleValue) {
-    status = "partial"
-  } else if (totalReceived === 0 && saleValue > 0) {
-    status = "pending"
-  } else {
-    status = "divergent"
+    let status: Transaction["status"]
+
+    if (saleValue === 0 && totalReceived === 0) {
+      status = "pending"
+    } else if (totalReceived === saleValue && saleValue > 0) {
+      status = "received"
+    } else if (totalReceived > 0 && totalReceived < saleValue) {
+      status = "partial"
+    } else if (totalReceived === 0 && saleValue > 0) {
+      status = "pending"
+    } else {
+      status = "divergent"
+    }
+
+    console.log("[v0] Calculated status:", status)
+    const result = await createTransaction(transaction, status)
+    console.log("[v0] Transaction created:", result)
+
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error in addTransaction:", error)
+    throw error
   }
-
-  const result = await createTransaction(transaction, status)
-  revalidatePath("/")
-  return result
 }
 
 export async function editTransaction(id: string, transaction: Omit<Transaction, "id" | "status">) {
-  // Calculate status
-  const saleValue = transaction.saleValue
-  const totalReceived = transaction.totalReceived
+  try {
+    console.log("[v0] Editing transaction with id:", id)
 
-  let status: Transaction["status"]
+    // Calculate status
+    const saleValue = transaction.saleValue
+    const totalReceived = transaction.totalReceived
 
-  if (saleValue === 0 && totalReceived === 0) {
-    status = "pending"
-  } else if (totalReceived === saleValue && saleValue > 0) {
-    status = "received"
-  } else if (totalReceived > 0 && totalReceived < saleValue) {
-    status = "partial"
-  } else if (totalReceived === 0 && saleValue > 0) {
-    status = "pending"
-  } else {
-    status = "divergent"
+    let status: Transaction["status"]
+
+    if (saleValue === 0 && totalReceived === 0) {
+      status = "pending"
+    } else if (totalReceived === saleValue && saleValue > 0) {
+      status = "received"
+    } else if (totalReceived > 0 && totalReceived < saleValue) {
+      status = "partial"
+    } else if (totalReceived === 0 && saleValue > 0) {
+      status = "pending"
+    } else {
+      status = "divergent"
+    }
+
+    console.log("[v0] Calculated status:", status)
+    const result = await updateTransaction(id, transaction, status)
+    console.log("[v0] Transaction updated:", result)
+
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error in editTransaction:", error)
+    throw error
   }
-
-  const result = await updateTransaction(id, transaction, status)
-  revalidatePath("/")
-  return result
 }

@@ -1,27 +1,19 @@
 import { neon } from "@neondatabase/serverless"
 
 function getDatabaseUrl(): string {
-  // Try different environment variables in order of preference
-  const possibleUrls = [process.env.NEON_DATABASE_URL, process.env.NEON_DATABASE_URL, process.env.NEON_POSTGRES_URL]
+  const url = process.env.NEON_DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.NEON_POSTGRES_URL
 
-  for (const url of possibleUrls) {
-    if (url) {
-      // Clean the URL if it has psql command wrapper
-      let cleanUrl = url.trim()
-
-      // Remove psql command wrapper if present
-      if (cleanUrl.startsWith("psql '") || cleanUrl.startsWith('psql "')) {
-        cleanUrl = cleanUrl.replace(/^psql\s+['"]/, "").replace(/['"]$/, "")
-      }
-
-      // Validate it's a proper URL
-      if (cleanUrl.startsWith("postgres://") || cleanUrl.startsWith("postgresql://")) {
-        return cleanUrl
-      }
-    }
+  if (!url) {
+    throw new Error("No database URL found. Please set DATABASE_URL environment variable.")
   }
 
-  throw new Error("No valid database URL found in environment variables")
+  // Clean the URL if it has psql command wrapper
+  let cleanUrl = url.trim()
+  if (cleanUrl.startsWith("psql '") || cleanUrl.startsWith('psql "')) {
+    cleanUrl = cleanUrl.replace(/^psql\s+['"]/, "").replace(/['"]$/, "")
+  }
+
+  return cleanUrl
 }
 
 const sql = neon(getDatabaseUrl())
@@ -115,8 +107,11 @@ export async function createTransaction(
   status: string,
 ): Promise<Transaction | null> {
   try {
+    console.log("[v0] Creating transaction with data:", transaction)
     const id = Date.now().toString()
     const dbTx = frontendToDb(transaction, id, status)
+
+    console.log("[v0] Converted to DB format:", dbTx)
 
     const result = await sql`
       INSERT INTO transactions (
@@ -129,10 +124,12 @@ export async function createTransaction(
       )
       RETURNING *
     `
+
+    console.log("[v0] Transaction created successfully:", result[0])
     return dbToFrontend(result[0] as DbTransaction)
   } catch (error) {
     console.error("[v0] Error creating transaction:", error)
-    return null
+    throw error
   }
 }
 

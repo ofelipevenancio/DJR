@@ -80,12 +80,18 @@ export default function Home() {
 
   const addTransaction = async (transaction: Omit<Transaction, "id" | "status">) => {
     try {
+      console.log("[v0] Adding transaction:", transaction)
       const result = await addTransactionAction(transaction)
+      console.log("[v0] Add transaction result:", result)
       if (result) {
-        await loadTransactions() // Reload from database
+        console.log("[v0] Reloading transactions from database...")
+        await loadTransactions()
+      } else {
+        alert("Erro ao adicionar lançamento. Verifique o console para mais detalhes.")
       }
     } catch (error) {
       console.error("[v0] Error adding transaction:", error)
+      alert(`Erro ao adicionar lançamento: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
     }
   }
 
