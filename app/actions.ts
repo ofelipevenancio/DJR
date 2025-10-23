@@ -6,6 +6,19 @@ import {
   updateTransaction,
   deleteTransaction as deleteTransactionDb,
   type Transaction,
+  getEmpresas,
+  createEmpresa,
+  updateEmpresa,
+  deleteEmpresa,
+  getContasBancarias,
+  createContaBancaria,
+  updateContaBancaria,
+  deleteContaBancaria,
+  getFormasRecebimento,
+  createFormaRecebimento,
+  updateFormaRecebimento,
+  deleteFormaRecebimento,
+  type MasterDataItem,
 } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 
@@ -196,5 +209,131 @@ export async function deleteTransaction(id: string) {
   } catch (error) {
     console.error("[v0] Error in deleteTransaction:", error)
     throw error
+  }
+}
+
+export async function fetchEmpresas(): Promise<MasterDataItem[]> {
+  try {
+    return await getEmpresas()
+  } catch (error) {
+    console.error("[v0] Error fetching empresas:", error)
+    return []
+  }
+}
+
+export async function addEmpresa(nome: string) {
+  try {
+    const result = await createEmpresa(nome)
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error adding empresa:", error)
+    return null
+  }
+}
+
+export async function editEmpresa(id: string, nome: string) {
+  try {
+    const result = await updateEmpresa(id, nome)
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error editing empresa:", error)
+    return false
+  }
+}
+
+export async function removeEmpresa(id: string) {
+  try {
+    const result = await deleteEmpresa(id)
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error removing empresa:", error)
+    return false
+  }
+}
+
+export async function fetchContasBancarias(): Promise<MasterDataItem[]> {
+  try {
+    return await getContasBancarias()
+  } catch (error) {
+    console.error("[v0] Error fetching contas bancarias:", error)
+    return []
+  }
+}
+
+export async function addContaBancaria(nome: string) {
+  try {
+    const result = await createContaBancaria(nome)
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error adding conta bancaria:", error)
+    return null
+  }
+}
+
+export async function editContaBancaria(id: string, nome: string) {
+  try {
+    const result = await updateContaBancaria(id, nome)
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error editing conta bancaria:", error)
+    return false
+  }
+}
+
+export async function removeContaBancaria(id: string) {
+  try {
+    const result = await deleteContaBancaria(id)
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error removing conta bancaria:", error)
+    return false
+  }
+}
+
+export async function fetchFormasRecebimento(): Promise<MasterDataItem[]> {
+  try {
+    return await getFormasRecebimento()
+  } catch (error) {
+    console.error("[v0] Error fetching formas recebimento:", error)
+    return []
+  }
+}
+
+export async function addFormaRecebimento(nome: string) {
+  try {
+    const result = await createFormaRecebimento(nome)
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error adding forma recebimento:", error)
+    return null
+  }
+}
+
+export async function editFormaRecebimento(id: string, nome: string) {
+  try {
+    const result = await updateFormaRecebimento(id, nome)
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error editing forma recebimento:", error)
+    return false
+  }
+}
+
+export async function removeFormaRecebimento(id: string) {
+  try {
+    const result = await deleteFormaRecebimento(id)
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error removing forma recebimento:", error)
+    return false
   }
 }

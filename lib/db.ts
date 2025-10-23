@@ -13,6 +13,12 @@ function getDatabaseUrl(): string {
     cleanUrl = cleanUrl.replace(/^psql\s+['"]/, "").replace(/['"]$/, "")
   }
 
+  // Remove unsupported channel_binding parameter
+  cleanUrl = cleanUrl.replace(/[&?]channel_binding=\w+/g, "")
+
+  // Clean up trailing ? or &
+  cleanUrl = cleanUrl.replace(/[?&]$/, "")
+
   return cleanUrl
 }
 
@@ -119,6 +125,220 @@ async function ensureTableExists() {
   } catch (error) {
     console.error("[v0] Error creating table:", error)
     throw error
+  }
+}
+
+// Master data interfaces and functions
+export interface MasterDataItem {
+  id: string
+  nome: string
+  ativo: boolean
+}
+
+async function checkMasterDataTablesExist() {
+  try {
+    const tablesExist = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'empresas'
+      ) as exists
+    `
+
+    if (!tablesExist[0]?.exists) {
+      console.error(
+        "[v0] Master data tables do not exist. Please run the SQL script: scripts/003_reset_master_data_tables.sql",
+      )
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error("[v0] Error checking master data tables:", error)
+    return false
+  }
+}
+
+// Empresas (Companies)
+export async function getEmpresas(): Promise<MasterDataItem[]> {
+  try {
+    const exists = await checkMasterDataTablesExist()
+    if (!exists) {
+      return []
+    }
+
+    const result = await sql`SELECT id, nome, ativo FROM empresas ORDER BY nome`
+    return result.map((row: any) => ({
+      id: row.id.toString(),
+      nome: row.nome,
+      ativo: row.ativo,
+    }))
+  } catch (error) {
+    console.error("[v0] Error fetching empresas:", error)
+    return []
+  }
+}
+
+export async function createEmpresa(nome: string): Promise<MasterDataItem | null> {
+  try {
+    const result = await sql`
+      INSERT INTO empresas (nome) VALUES (${nome})
+      RETURNING id, nome, ativo
+    `
+    return {
+      id: result[0].id.toString(),
+      nome: result[0].nome,
+      ativo: result[0].ativo,
+    }
+  } catch (error) {
+    console.error("[v0] Error creating empresa:", error)
+    return null
+  }
+}
+
+export async function updateEmpresa(id: string, nome: string): Promise<boolean> {
+  try {
+    await sql`
+      UPDATE empresas 
+      SET nome = ${nome}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+    `
+    return true
+  } catch (error) {
+    console.error("[v0] Error updating empresa:", error)
+    return false
+  }
+}
+
+export async function deleteEmpresa(id: string): Promise<boolean> {
+  try {
+    await sql`DELETE FROM empresas WHERE id = ${id}`
+    return true
+  } catch (error) {
+    console.error("[v0] Error deleting empresa:", error)
+    return false
+  }
+}
+
+// Contas Bancárias (Bank Accounts)
+export async function getContasBancarias(): Promise<MasterDataItem[]> {
+  try {
+    const exists = await checkMasterDataTablesExist()
+    if (!exists) {
+      return []
+    }
+
+    const result = await sql`SELECT id, nome, ativo FROM contas_bancarias ORDER BY nome`
+    return result.map((row: any) => ({
+      id: row.id.toString(),
+      nome: row.nome,
+      ativo: row.ativo,
+    }))
+  } catch (error) {
+    console.error("[v0] Error fetching contas bancarias:", error)
+    return []
+  }
+}
+
+export async function createContaBancaria(nome: string): Promise<MasterDataItem | null> {
+  try {
+    const result = await sql`
+      INSERT INTO contas_bancarias (nome) VALUES (${nome})
+      RETURNING id, nome, ativo
+    `
+    return {
+      id: result[0].id.toString(),
+      nome: result[0].nome,
+      ativo: result[0].ativo,
+    }
+  } catch (error) {
+    console.error("[v0] Error creating conta bancaria:", error)
+    return null
+  }
+}
+
+export async function updateContaBancaria(id: string, nome: string): Promise<boolean> {
+  try {
+    await sql`
+      UPDATE contas_bancarias 
+      SET nome = ${nome}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+    `
+    return true
+  } catch (error) {
+    console.error("[v0] Error updating conta bancaria:", error)
+    return false
+  }
+}
+
+export async function deleteContaBancaria(id: string): Promise<boolean> {
+  try {
+    await sql`DELETE FROM contas_bancarias WHERE id = ${id}`
+    return true
+  } catch (error) {
+    console.error("[v0] Error deleting conta bancaria:", error)
+    return false
+  }
+}
+
+// Formas de Recebimento (Payment Methods)
+export async function getFormasRecebimento(): Promise<MasterDataItem[]> {
+  try {
+    const exists = await checkMasterDataTablesExist()
+    if (!exists) {
+      return []
+    }
+
+    const result = await sql`SELECT id, nome, ativo FROM formas_recebimento ORDER BY nome`
+    return result.map((row: any) => ({
+      id: row.id.toString(),
+      nome: row.nome,
+      ativo: row.ativo,
+    }))
+  } catch (error) {
+    console.error("[v0] Error fetching formas recebimento:", error)
+    return []
+  }
+}
+
+export async function createFormaRecebimento(nome: string): Promise<MasterDataItem | null> {
+  try {
+    const result = await sql`
+      INSERT INTO formas_recebimento (nome) VALUES (${nome})
+      RETURNING id, nome, ativo
+    `
+    return {
+      id: result[0].id.toString(),
+      nome: result[0].nome,
+      ativo: result[0].ativo,
+    }
+  } catch (error) {
+    console.error("[v0] Error creating forma recebimento:", error)
+    return null
+  }
+}
+
+export async function updateFormaRecebimento(id: string, nome: string): Promise<boolean> {
+  try {
+    await sql`
+      UPDATE formas_recebimento 
+      SET nome = ${nome}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+    `
+    return true
+  } catch (error) {
+    console.error("[v0] Error updating forma recebimento:", error)
+    return false
+  }
+}
+
+export async function deleteFormaRecebimento(id: string): Promise<boolean> {
+  try {
+    await sql`DELETE FROM formas_recebimento WHERE id = ${id}`
+    return true
+  } catch (error) {
+    console.error("[v0] Error deleting forma recebimento:", error)
+    return false
   }
 }
 

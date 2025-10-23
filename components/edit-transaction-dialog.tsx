@@ -173,7 +173,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onSave 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-invoiceNumbers">Nº NF(s)</Label>
+                <Label htmlFor="edit-invoiceNumbers">Nº NF(s) / Nº Ticket</Label>
                 <Input
                   id="edit-invoiceNumbers"
                   value={formData.invoiceNumbers}

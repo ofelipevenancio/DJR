@@ -137,7 +137,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="invoiceNumbers">Nº NF(s)</Label>
+          <Label htmlFor="invoiceNumbers">Nº NF(s) / Nº Ticket</Label>
           <Input
             id="invoiceNumbers"
             value={formData.invoiceNumbers}

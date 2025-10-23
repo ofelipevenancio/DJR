@@ -7,6 +7,7 @@ import { TransactionsView } from "@/components/transactions-view"
 import { PendentesView } from "@/components/pendentes-view"
 import { DashboardView } from "@/components/dashboard-view"
 import { ReportsView } from "@/components/reports-view"
+import { SettingsView } from "@/components/settings-view"
 import { LoginScreen } from "@/components/login-screen"
 import {
   fetchTransactions,
@@ -34,7 +35,9 @@ export type Transaction = {
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [currentView, setCurrentView] = useState<"transactions" | "pendentes" | "dashboard" | "reports">("transactions")
+  const [currentView, setCurrentView] = useState<"transactions" | "pendentes" | "dashboard" | "reports" | "settings">(
+    "transactions",
+  )
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
 
@@ -193,8 +196,10 @@ export default function Home() {
             <PendentesView transactions={transactions} onUpdateTransaction={updateTransaction} />
           ) : currentView === "dashboard" ? (
             <DashboardView transactions={transactions} />
-          ) : (
+          ) : currentView === "reports" ? (
             <ReportsView transactions={transactions} />
+          ) : (
+            <SettingsView />
           )}
         </div>
       </main>

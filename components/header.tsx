@@ -1,12 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { LogOut, FileText, Clock, LayoutDashboard, FileBarChart } from "lucide-react"
+import { LogOut, FileText, Clock, LayoutDashboard, FileBarChart, Settings } from "lucide-react"
 import Image from "next/image"
 
 type HeaderProps = {
-  currentView: "transactions" | "pendentes" | "dashboard" | "reports"
-  onViewChange: (view: "transactions" | "pendentes" | "dashboard" | "reports") => void
+  currentView: "transactions" | "pendentes" | "dashboard" | "reports" | "settings"
+  onViewChange: (view: "transactions" | "pendentes" | "dashboard" | "reports" | "settings") => void
   onLogout?: () => void
 }
 
@@ -61,6 +61,15 @@ export function Header({ currentView, onViewChange, onLogout }: HeaderProps) {
             >
               <FileBarChart className="w-4 h-4" />
               Relatórios
+            </Button>
+            <Button
+              variant={currentView === "settings" ? "default" : "ghost"}
+              onClick={() => onViewChange("settings")}
+              className="gap-2 h-11 px-4"
+              size="lg"
+            >
+              <Settings className="w-4 h-4" />
+              Cadastros
             </Button>
 
             {onLogout && (
