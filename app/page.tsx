@@ -106,6 +106,38 @@ export default function Home() {
     }
   }
 
+  const bulkImportTransactions = async (transactions: Omit<Transaction, "id" | "status">[]) => {
+    try {
+      console.log("[v0] Bulk importing", transactions.length, "transactions")
+      let successCount = 0
+      let errorCount = 0
+
+      for (const transaction of transactions) {
+        try {
+          const result = await addTransactionAction(transaction)
+          if (result) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch (error) {
+          console.error("[v0] Error importing transaction:", error)
+          errorCount++
+        }
+      }
+
+      console.log("[v0] Import complete:", successCount, "success,", errorCount, "errors")
+      await loadTransactions()
+
+      if (errorCount > 0) {
+        alert(`Importação concluída: ${successCount} sucesso, ${errorCount} erros`)
+      }
+    } catch (error) {
+      console.error("[v0] Error in bulk import:", error)
+      alert("Erro ao importar lançamentos em massa")
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
@@ -136,6 +168,7 @@ export default function Home() {
               transactions={transactions}
               onAddTransaction={addTransaction}
               onUpdateTransaction={updateTransaction}
+              onBulkImport={bulkImportTransactions}
             />
           ) : currentView === "pendentes" ? (
             <PendentesView transactions={transactions} onUpdateTransaction={updateTransaction} />

@@ -1,0 +1,4 @@
+pedido,data,empresa,cliente,valor_vendido,nf,total_nf,total_recebido,forma_recebimento,banco_conta,observacoes
+PED-001,15/01/2025,Klabin,Klabin S.A,50000.00,"NF-1001, NF-1002",50000.00,50000.00,PIX,Sicoob Aracoop - Ag. 4264 - C/C 66433-2,Pagamento completo
+PED-002,16/01/2025,Jaepel,JAEPEL Ltda,30000.00,NF-2001,30000.00,15000.00,Transferência,Sicoob Aracredi - Ag. 3093 - C/C 6610-9,Pagamento parcial
+PED-003,17/01/2025,Fernandez,Fernandez Reciclagem,,,NF-3001,,,,,Nota pré-emitida sem valores
