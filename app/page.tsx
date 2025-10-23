@@ -12,6 +12,7 @@ import {
   fetchTransactions,
   addTransaction as addTransactionAction,
   editTransaction as editTransactionAction,
+  deleteTransaction as deleteTransactionAction,
 } from "./actions"
 
 export type Transaction = {
@@ -106,6 +107,23 @@ export default function Home() {
     }
   }
 
+  const deleteTransaction = async (id: string) => {
+    try {
+      const confirmed = confirm("Tem certeza que deseja excluir este lançamento?")
+      if (!confirmed) return
+
+      const result = await deleteTransactionAction(id)
+      if (result) {
+        await loadTransactions() // Reload from database
+      } else {
+        alert("Erro ao excluir lançamento")
+      }
+    } catch (error) {
+      console.error("[v0] Error deleting transaction:", error)
+      alert("Erro ao excluir lançamento")
+    }
+  }
+
   const bulkImportTransactions = async (transactions: Omit<Transaction, "id" | "status">[]) => {
     try {
       console.log("[v0] Bulk importing", transactions.length, "transactions")
@@ -168,6 +186,7 @@ export default function Home() {
               transactions={transactions}
               onAddTransaction={addTransaction}
               onUpdateTransaction={updateTransaction}
+              onDeleteTransaction={deleteTransaction}
               onBulkImport={bulkImportTransactions}
             />
           ) : currentView === "pendentes" ? (

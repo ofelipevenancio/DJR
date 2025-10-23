@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless"
 
 function getDatabaseUrl(): string {
-  const url = process.env.NEON_DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.NEON_POSTGRES_URL
+  const url = process.env.NEON_NEON_DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.NEON_POSTGRES_URL
 
   if (!url) {
     throw new Error("No database URL found. Please set DATABASE_URL environment variable.")
@@ -196,5 +196,22 @@ export async function updateTransaction(
   } catch (error) {
     console.error("[v0] Error updating transaction:", error)
     return null
+  }
+}
+
+export async function deleteTransaction(id: string): Promise<boolean> {
+  try {
+    console.log("[v0] Deleting transaction with id:", id)
+    const result = await sql`
+      DELETE FROM transactions 
+      WHERE id = ${id}
+      RETURNING id
+    `
+    const success = result.length > 0
+    console.log("[v0] Transaction deleted:", success)
+    return success
+  } catch (error) {
+    console.error("[v0] Error deleting transaction:", error)
+    return false
   }
 }

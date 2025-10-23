@@ -13,6 +13,7 @@ type TransactionsViewProps = {
   transactions: Transaction[]
   onAddTransaction: (transaction: Omit<Transaction, "id" | "status">) => void
   onUpdateTransaction: (id: string, transaction: Omit<Transaction, "id" | "status">) => void
+  onDeleteTransaction: (id: string) => void
   onBulkImport: (transactions: Omit<Transaction, "id" | "status">[]) => void
 }
 
@@ -20,6 +21,7 @@ export function TransactionsView({
   transactions,
   onAddTransaction,
   onUpdateTransaction,
+  onDeleteTransaction,
   onBulkImport,
 }: TransactionsViewProps) {
   const [importing, setImporting] = useState(false)
@@ -66,7 +68,7 @@ export function TransactionsView({
           saleValue: valor_vendido ? Number.parseFloat(valor_vendido) : 0,
           invoiceNumbers: nf || "",
           invoiceTotal: total_nf ? Number.parseFloat(total_nf) : 0,
-          receivedTotal: total_recebido ? Number.parseFloat(total_recebido) : 0,
+          totalReceived: total_recebido ? Number.parseFloat(total_recebido) : 0,
           paymentMethod: forma_recebimento || "",
           bankAccount: banco_conta || "",
           observations: observacoes || "",
@@ -142,7 +144,11 @@ export function TransactionsView({
           </div>
         </CardHeader>
         <CardContent>
-          <TransactionsTable transactions={transactions} onUpdateTransaction={onUpdateTransaction} />
+          <TransactionsTable
+            transactions={transactions}
+            onUpdateTransaction={onUpdateTransaction}
+            onDeleteTransaction={onDeleteTransaction}
+          />
         </CardContent>
       </Card>
     </div>

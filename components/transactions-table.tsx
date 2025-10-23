@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, AlertCircle, Clock, AlertTriangle, Pencil } from "lucide-react"
+import { CheckCircle2, AlertCircle, Clock, AlertTriangle, Pencil, Trash2 } from "lucide-react"
 import type { Transaction } from "@/app/page"
 import { EditTransactionDialog } from "@/components/edit-transaction-dialog"
 import { formatDate } from "@/lib/utils"
@@ -13,13 +13,13 @@ import { formatDate } from "@/lib/utils"
 type TransactionsTableProps = {
   transactions: Transaction[]
   onUpdateTransaction: (id: string, transaction: Omit<Transaction, "id" | "status">) => void
+  onDeleteTransaction: (id: string) => void
 }
 
-export function TransactionsTable({ transactions, onUpdateTransaction }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, onUpdateTransaction, onDeleteTransaction }: TransactionsTableProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [companyFilter, setCompanyFilter] = useState<string>("all")
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
-  // </CHANGE>
 
   const filteredTransactions = transactions.filter((t) => {
     const matchesStatus = statusFilter === "all" || t.status === statusFilter
@@ -119,7 +119,6 @@ export function TransactionsTable({ transactions, onUpdateTransaction }: Transac
                 <TableHead className="font-semibold text-right">Diferença</TableHead>
                 <TableHead className="font-semibold">Status</TableHead>
                 <TableHead className="font-semibold">Ações</TableHead>
-                {/* </CHANGE> */}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -186,16 +185,27 @@ export function TransactionsTable({ transactions, onUpdateTransaction }: Transac
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingTransaction(transaction)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingTransaction(transaction)}
+                            className="h-8 w-8 p-0"
+                            title="Editar"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDeleteTransaction(transaction.id)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
-                      {/* </CHANGE> */}
                     </TableRow>
                   )
                 })
@@ -216,7 +226,6 @@ export function TransactionsTable({ transactions, onUpdateTransaction }: Transac
           }}
         />
       )}
-      {/* </CHANGE> */}
     </div>
   )
 }

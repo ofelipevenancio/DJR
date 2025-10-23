@@ -1,6 +1,12 @@
 "use server"
 
-import { getTransactions, createTransaction, updateTransaction, type Transaction } from "@/lib/db"
+import {
+  getTransactions,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction as deleteTransactionDb,
+  type Transaction,
+} from "@/lib/db"
 import { revalidatePath } from "next/cache"
 
 export async function fetchTransactions(): Promise<Transaction[]> {
@@ -175,6 +181,20 @@ export async function bulkImportKlabinData(tsvData: string) {
     }
   } catch (error) {
     console.error("[v0] Error in bulk import:", error)
+    throw error
+  }
+}
+
+export async function deleteTransaction(id: string) {
+  try {
+    console.log("[v0] Deleting transaction with id:", id)
+    const result = await deleteTransactionDb(id)
+    console.log("[v0] Transaction deleted:", result)
+
+    revalidatePath("/")
+    return result
+  } catch (error) {
+    console.error("[v0] Error in deleteTransaction:", error)
     throw error
   }
 }
