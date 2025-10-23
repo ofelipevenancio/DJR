@@ -1,7 +1,12 @@
 import { neon } from "@neondatabase/serverless"
 
 function getDatabaseUrl(): string {
-  const url = process.env.NEON_NEON_DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.NEON_POSTGRES_URL
+  // Try different environment variables in order of preference
+  const url =
+    process.env.NEON_DATABASE_URL ||
+    process.env.NEON_DATABASE_URL ||
+    process.env.NEON_POSTGRES_URL ||
+    process.env.NEON_POSTGRES_URL_NO_SSL
 
   if (!url) {
     throw new Error("No database URL found. Please set DATABASE_URL environment variable.")
@@ -13,8 +18,9 @@ function getDatabaseUrl(): string {
     cleanUrl = cleanUrl.replace(/^psql\s+['"]/, "").replace(/['"]$/, "")
   }
 
-  // Remove unsupported channel_binding parameter
+  // Remove unsupported parameters for Neon serverless driver
   cleanUrl = cleanUrl.replace(/[&?]channel_binding=\w+/g, "")
+  cleanUrl = cleanUrl.replace(/[&?]sslmode=\w+/g, "")
 
   // Clean up trailing ? or &
   cleanUrl = cleanUrl.replace(/[?&]$/, "")
@@ -35,6 +41,7 @@ export interface DbTransaction {
   nf: string
   total_nf: number
   total_recebido: number
+  desconto: number
   forma_recebimento: string | null
   banco_conta: string | null
   observacoes: string
@@ -54,6 +61,7 @@ export interface Transaction {
   invoiceNumbers: string
   invoiceTotal: number
   totalReceived: number
+  discount: number
   paymentMethod: string
   bankAccount: string
   observations: string
@@ -72,6 +80,7 @@ function dbToFrontend(dbTx: DbTransaction): Transaction {
     invoiceNumbers: dbTx.nf,
     invoiceTotal: Number(dbTx.total_nf),
     totalReceived: Number(dbTx.total_recebido),
+    discount: Number(dbTx.desconto || 0),
     paymentMethod: dbTx.forma_recebimento || "",
     bankAccount: dbTx.banco_conta || "",
     observations: dbTx.observacoes,
@@ -93,6 +102,7 @@ function frontendToDb(
     nf: tx.invoiceNumbers,
     total_nf: tx.invoiceTotal,
     total_recebido: tx.totalReceived,
+    desconto: tx.discount || 0,
     forma_recebimento: tx.paymentMethod || null,
     banco_conta: tx.bankAccount || null,
     observacoes: tx.observations,
@@ -113,6 +123,7 @@ async function ensureTableExists() {
         nf TEXT,
         total_nf DECIMAL(15, 2) DEFAULT 0,
         total_recebido DECIMAL(15, 2) DEFAULT 0,
+        desconto DECIMAL(15, 2) DEFAULT 0,
         forma_recebimento TEXT,
         banco_conta TEXT,
         observacoes TEXT,
@@ -368,11 +379,11 @@ export async function createTransaction(
     const result = await sql`
       INSERT INTO transactions (
         pedido, data, empresa, cliente, valor_vendido, nf, total_nf, 
-        total_recebido, forma_recebimento, banco_conta, observacoes, status
+        total_recebido, desconto, forma_recebimento, banco_conta, observacoes, status
       ) VALUES (
         ${dbTx.pedido}, ${dbTx.data}, ${dbTx.empresa}, ${dbTx.cliente}, 
         ${dbTx.valor_vendido}, ${dbTx.nf}, ${dbTx.total_nf}, ${dbTx.total_recebido}, 
-        ${dbTx.forma_recebimento}, ${dbTx.banco_conta}, ${dbTx.observacoes}, ${dbTx.status}
+        ${dbTx.desconto}, ${dbTx.forma_recebimento}, ${dbTx.banco_conta}, ${dbTx.observacoes}, ${dbTx.status}
       )
       RETURNING *
     `
@@ -404,6 +415,7 @@ export async function updateTransaction(
         nf = ${dbTx.nf},
         total_nf = ${dbTx.total_nf},
         total_recebido = ${dbTx.total_recebido},
+        desconto = ${dbTx.desconto},
         forma_recebimento = ${dbTx.forma_recebimento},
         banco_conta = ${dbTx.banco_conta},
         observacoes = ${dbTx.observacoes},

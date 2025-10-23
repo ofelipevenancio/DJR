@@ -41,14 +41,16 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
   const [paymentMethod, setPaymentMethod] = useState("")
   const [bankAccount, setBankAccount] = useState("")
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [showDiscountDialog, setShowDiscountDialog] = useState(false)
+  const [pendingPaymentData, setPendingPaymentData] = useState<{
+    amount: number
+    difference: number
+  } | null>(null)
 
-  // Filter only pending and partial transactions
   const pendingTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
-      // Only show pending or partial status
       if (transaction.status !== "pending" && transaction.status !== "partial") return false
 
-      // Apply other filters
       if (filters.startDate && transaction.saleDate < filters.startDate) return false
       if (filters.endDate && transaction.saleDate > filters.endDate) return false
       if (filters.orderNumber && !transaction.orderNumber.toLowerCase().includes(filters.orderNumber.toLowerCase()))
@@ -105,6 +107,33 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
     setShowPaymentDialog(true)
   }
 
+  const handleDiscountDecision = (applyDiscount: boolean) => {
+    if (!selectedTransaction || !pendingPaymentData) return
+
+    const newTotalReceived = selectedTransaction.totalReceived + pendingPaymentData.amount
+    let newDiscount = selectedTransaction.discount || 0
+
+    if (applyDiscount) {
+      newDiscount += pendingPaymentData.difference
+    }
+
+    onUpdateTransaction(selectedTransaction.id, {
+      ...selectedTransaction,
+      totalReceived: newTotalReceived,
+      discount: newDiscount,
+      paymentMethod: paymentMethod || selectedTransaction.paymentMethod,
+      bankAccount: bankAccount || selectedTransaction.bankAccount,
+    })
+
+    setShowDiscountDialog(false)
+    setShowPaymentDialog(false)
+    setSelectedTransaction(null)
+    setPaymentAmount("")
+    setPaymentMethod("")
+    setBankAccount("")
+    setPendingPaymentData(null)
+  }
+
   const handleRecordPayment = () => {
     if (!selectedTransaction) return
 
@@ -114,9 +143,19 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
       return
     }
 
-    const pendingAmount = selectedTransaction.saleValue - selectedTransaction.totalReceived
+    const pendingAmount =
+      selectedTransaction.saleValue - selectedTransaction.totalReceived - (selectedTransaction.discount || 0)
+
     if (amount > pendingAmount) {
       alert(`O valor do pagamento não pode ser maior que o valor pendente (${formatCurrency(pendingAmount)}).`)
+      return
+    }
+
+    const difference = pendingAmount - amount
+
+    if (difference > 0.01) {
+      setPendingPaymentData({ amount, difference })
+      setShowDiscountDialog(true)
       return
     }
 
@@ -145,21 +184,26 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
   const handleFullPayment = () => {
     if (!selectedTransaction) return
 
-    const pendingAmount = selectedTransaction.saleValue - selectedTransaction.totalReceived
+    const pendingAmount =
+      selectedTransaction.saleValue - selectedTransaction.totalReceived - (selectedTransaction.discount || 0)
     setPaymentAmount(pendingAmount.toFixed(2))
   }
 
-  // Calculate summary statistics
   const summary = useMemo(() => {
-    const totalPending = pendingTransactions.reduce((sum, t) => sum + (t.saleValue - t.totalReceived), 0)
+    const totalPending = pendingTransactions.reduce(
+      (sum, t) => sum + (t.saleValue - t.totalReceived - (t.discount || 0)),
+      0,
+    )
     const totalPartiallyPaid = pendingTransactions
       .filter((t) => t.status === "partial")
       .reduce((sum, t) => sum + t.totalReceived, 0)
+    const totalDiscount = pendingTransactions.reduce((sum, t) => sum + (t.discount || 0), 0)
 
     return {
       count: pendingTransactions.length,
       totalPending,
       totalPartiallyPaid,
+      totalDiscount,
     }
   }, [pendingTransactions])
 
@@ -172,7 +216,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
         </p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
@@ -202,7 +245,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
         </Card>
       </div>
 
-      {/* Filters Card */}
       <Card className="shadow-md">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -225,7 +267,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {/* Date Range */}
             <div className="space-y-2">
               <Label htmlFor="startDate" className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
@@ -252,7 +293,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
               />
             </div>
 
-            {/* Order Number */}
             <div className="space-y-2">
               <Label htmlFor="orderNumber" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
@@ -266,7 +306,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
               />
             </div>
 
-            {/* Company */}
             <div className="space-y-2">
               <Label htmlFor="company" className="flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
@@ -286,7 +325,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
               </Select>
             </div>
 
-            {/* Client */}
             <div className="space-y-2">
               <Label htmlFor="client" className="flex items-center gap-2">
                 <User className="w-4 h-4" />
@@ -300,7 +338,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
               />
             </div>
 
-            {/* Value Range */}
             <div className="space-y-2">
               <Label htmlFor="minValue" className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4" />
@@ -334,7 +371,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
         </CardContent>
       </Card>
 
-      {/* Pending Transactions Table */}
       <Card className="shadow-md">
         <CardHeader>
           <CardTitle className="text-xl font-bold">Notas Pendentes</CardTitle>
@@ -353,6 +389,7 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
                   <TableHead className="font-bold">Cliente</TableHead>
                   <TableHead className="font-bold text-right">Valor Total</TableHead>
                   <TableHead className="font-bold text-right">Já Recebido</TableHead>
+                  <TableHead className="font-bold text-right">Desconto</TableHead>
                   <TableHead className="font-bold text-right">A Receber</TableHead>
                   <TableHead className="font-bold">Status</TableHead>
                   <TableHead className="font-bold">Ações</TableHead>
@@ -361,7 +398,7 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
               <TableBody>
                 {pendingTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <CheckCircle2 className="w-12 h-12 text-green-500" />
                         <p className="font-medium">Nenhuma nota pendente encontrada</p>
@@ -373,7 +410,8 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
                   </TableRow>
                 ) : (
                   pendingTransactions.map((transaction) => {
-                    const pendingAmount = transaction.saleValue - transaction.totalReceived
+                    const pendingAmount =
+                      transaction.saleValue - transaction.totalReceived - (transaction.discount || 0)
                     return (
                       <TableRow key={transaction.id} className="hover:bg-muted/30">
                         <TableCell className="font-medium">{transaction.orderNumber}</TableCell>
@@ -389,6 +427,11 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
                         </TableCell>
                         <TableCell className="text-right text-yellow-600 font-medium">
                           {formatCurrency(transaction.totalReceived)}
+                        </TableCell>
+                        <TableCell className="text-right text-blue-600 font-medium">
+                          {transaction.discount && transaction.discount > 0
+                            ? formatCurrency(transaction.discount)
+                            : "-"}
                         </TableCell>
                         <TableCell className="text-right text-red-600 font-bold">
                           {formatCurrency(pendingAmount)}
@@ -410,7 +453,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
         </CardContent>
       </Card>
 
-      {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -425,7 +467,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
 
           {selectedTransaction && (
             <div className="space-y-4 py-4">
-              {/* Transaction Info */}
               <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Cliente:</span>
@@ -441,15 +482,24 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
                     {formatCurrency(selectedTransaction.totalReceived)}
                   </span>
                 </div>
+                {selectedTransaction.discount && selectedTransaction.discount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Desconto Concedido:</span>
+                    <span className="font-medium text-blue-600">{formatCurrency(selectedTransaction.discount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm border-t border-border pt-2">
                   <span className="text-muted-foreground font-medium">Valor Pendente:</span>
                   <span className="font-bold text-red-600">
-                    {formatCurrency(selectedTransaction.saleValue - selectedTransaction.totalReceived)}
+                    {formatCurrency(
+                      selectedTransaction.saleValue -
+                        selectedTransaction.totalReceived -
+                        (selectedTransaction.discount || 0),
+                    )}
                   </span>
                 </div>
               </div>
 
-              {/* Payment Amount */}
               <div className="space-y-2">
                 <Label htmlFor="paymentAmount">Valor do Pagamento *</Label>
                 <div className="flex gap-2">
@@ -468,7 +518,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
                 </div>
               </div>
 
-              {/* Payment Method */}
               <div className="space-y-2">
                 <Label htmlFor="paymentMethodDialog">Forma de Pagamento</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -485,7 +534,6 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
                 </Select>
               </div>
 
-              {/* Bank Account */}
               <div className="space-y-2">
                 <Label htmlFor="bankAccountDialog">Conta Bancária</Label>
                 <Select value={bankAccount} onValueChange={setBankAccount}>
@@ -517,6 +565,89 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
               Cancelar
             </Button>
             <Button onClick={handleRecordPayment}>Confirmar Pagamento</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-yellow-600" />
+              Pagamento Parcial Detectado
+            </DialogTitle>
+            <DialogDescription>
+              O valor do pagamento é menor que o valor pendente. Como deseja tratar a diferença?
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTransaction && pendingPaymentData && (
+            <div className="space-y-4 py-4">
+              <div className="rounded-lg bg-yellow-50 dark:bg-yellow-950/20 p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Valor Pendente:</span>
+                  <span className="font-bold">
+                    {formatCurrency(
+                      selectedTransaction.saleValue -
+                        selectedTransaction.totalReceived -
+                        (selectedTransaction.discount || 0),
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Valor do Pagamento:</span>
+                  <span className="font-medium text-green-600">{formatCurrency(pendingPaymentData.amount)}</span>
+                </div>
+                <div className="flex justify-between text-sm border-t border-border pt-2">
+                  <span className="text-muted-foreground font-medium">Diferença:</span>
+                  <span className="font-bold text-red-600">{formatCurrency(pendingPaymentData.difference)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Como deseja tratar essa diferença?</p>
+
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-auto py-4 bg-transparent"
+                  onClick={() => handleDiscountDecision(false)}
+                >
+                  <div className="text-left">
+                    <div className="font-semibold">Manter como Pendente</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      A diferença de {formatCurrency(pendingPaymentData.difference)} continuará pendente para
+                      recebimento futuro
+                    </div>
+                  </div>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-auto py-4 border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-950/20 bg-transparent"
+                  onClick={() => handleDiscountDecision(true)}
+                >
+                  <div className="text-left">
+                    <div className="font-semibold text-blue-600">Aplicar como Desconto</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      A diferença de {formatCurrency(pendingPaymentData.difference)} será registrada como desconto
+                      concedido
+                    </div>
+                  </div>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowDiscountDialog(false)
+                setPendingPaymentData(null)
+              }}
+            >
+              Cancelar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
