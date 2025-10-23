@@ -34,8 +34,8 @@ export function SalesChart({ transactions }: SalesChartProps) {
           }
         />
         <Legend />
-        <Bar dataKey="Valor Vendido" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="Valor Recebido" fill="hsl(var(--status-received))" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="Valor Vendido" fill="hsl(var(--status-received))" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="Valor Recebido" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
