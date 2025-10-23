@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,10 +14,11 @@ type TransactionFormProps = {
   onSubmit: (transaction: Omit<Transaction, "id" | "status">) => void
 }
 
-const BANK_ACCOUNTS = [
-  { value: "sicoob-aracoop", label: "Sicoob Aracoop - Ag. 4264 - C/C 66433-2" },
-  { value: "sicoob-aracredi", label: "Sicoob Aracredi - Ag. 3093 - C/C 6610-9" },
-]
+type MasterData = {
+  empresas: Array<{ id: number; nome: string }>
+  contasBancarias: Array<{ id: number; nome: string; agencia: string; conta: string }>
+  formasRecebimento: Array<{ id: number; nome: string }>
+}
 
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [formData, setFormData] = useState({
@@ -33,6 +34,34 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     bankAccount: "",
     observations: "",
   })
+
+  const [masterData, setMasterData] = useState<MasterData>({
+    empresas: [],
+    contasBancarias: [],
+    formasRecebimento: [],
+  })
+
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const [empresasRes, contasRes, formasRes] = await Promise.all([
+          fetch("/api/master-data/empresas"),
+          fetch("/api/master-data/contas-bancarias"),
+          fetch("/api/master-data/formas-recebimento"),
+        ])
+
+        const empresas = await empresasRes.json()
+        const contasBancarias = await contasRes.json()
+        const formasRecebimento = await formasRes.json()
+
+        setMasterData({ empresas, contasBancarias, formasRecebimento })
+      } catch (error) {
+        console.error("[v0] Error fetching master data:", error)
+      }
+    }
+
+    fetchMasterData()
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,10 +132,11 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               <SelectValue placeholder="Selecione a empresa" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Klabin">Klabin</SelectItem>
-              <SelectItem value="Jaepel">Jaepel</SelectItem>
-              <SelectItem value="Fernandez">Fernandez</SelectItem>
-              <SelectItem value="Vale Tambau">Vale Tambau</SelectItem>
+              {masterData.empresas.map((empresa) => (
+                <SelectItem key={empresa.id} value={empresa.nome}>
+                  {empresa.nome}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -187,12 +217,11 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Pix">Pix</SelectItem>
-              <SelectItem value="Depósito">Depósito</SelectItem>
-              <SelectItem value="Transferência">Transferência</SelectItem>
-              <SelectItem value="Boleto">Boleto</SelectItem>
-              <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-              <SelectItem value="Cheque">Cheque</SelectItem>
+              {masterData.formasRecebimento.map((forma) => (
+                <SelectItem key={forma.id} value={forma.nome}>
+                  {forma.nome}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -209,9 +238,9 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               <SelectValue placeholder="Selecione o banco" />
             </SelectTrigger>
             <SelectContent>
-              {BANK_ACCOUNTS.map((bank) => (
-                <SelectItem key={bank.value} value={bank.label}>
-                  {bank.label}
+              {masterData.contasBancarias.map((conta) => (
+                <SelectItem key={conta.id} value={`${conta.nome} - Ag. ${conta.agencia} - C/C ${conta.conta}`}>
+                  {conta.nome} - Ag. {conta.agencia} - C/C {conta.conta}
                 </SelectItem>
               ))}
             </SelectContent>
