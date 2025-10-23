@@ -16,10 +16,10 @@ export function StatusPieChart({ transactions }: StatusPieChartProps) {
   }
 
   const data = [
-    { name: "Recebido", value: statusCounts.received, color: "hsl(var(--status-received))" },
-    { name: "Parcial", value: statusCounts.partial, color: "hsl(var(--status-partial))" },
-    { name: "Pendente", value: statusCounts.pending, color: "hsl(var(--status-pending))" },
-    { name: "Divergente", value: statusCounts.divergent, color: "hsl(var(--status-divergent))" },
+    { name: "Recebido", value: statusCounts.received, color: "#16A34A" }, // Green
+    { name: "Parcial", value: statusCounts.partial, color: "#FACC15" }, // Yellow
+    { name: "Pendente", value: statusCounts.pending, color: "#DC2626" }, // Red
+    { name: "Divergente", value: statusCounts.divergent, color: "#F97316" }, // Orange
   ].filter((item) => item.value > 0)
 
   return (
