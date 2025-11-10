@@ -20,7 +20,18 @@ import {
   deleteFormaRecebimento,
   type MasterDataItem,
 } from "@/lib/db"
+import { authenticateUser } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
+
+export async function login(email: string, password: string) {
+  try {
+    const user = await authenticateUser(email, password)
+    return user
+  } catch (error) {
+    console.error("[v0] Login error:", error)
+    return null
+  }
+}
 
 export async function fetchTransactions(): Promise<Transaction[]> {
   try {

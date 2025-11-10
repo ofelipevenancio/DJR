@@ -9,6 +9,7 @@ import { DashboardView } from "@/components/dashboard-view"
 import { ReportsView } from "@/components/reports-view"
 import { SettingsView } from "@/components/settings-view"
 import { LoginScreen } from "@/components/login-screen"
+import type { User } from "@/lib/auth"
 import {
   fetchTransactions,
   addTransaction as addTransactionAction,
@@ -34,6 +35,7 @@ export type Transaction = {
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentView, setCurrentView] = useState<"transactions" | "pendentes" | "dashboard" | "reports" | "settings">(
     "transactions",
@@ -43,8 +45,17 @@ export default function Home() {
 
   useEffect(() => {
     const authStatus = localStorage.getItem("djr_auth")
-    if (authStatus === "true") {
-      setIsAuthenticated(true)
+    const userDataStr = localStorage.getItem("djr_user_data")
+    if (authStatus === "true" && userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr)
+        setCurrentUser(userData)
+        setIsAuthenticated(true)
+      } catch (error) {
+        console.error("[v0] Error parsing user data:", error)
+        localStorage.removeItem("djr_auth")
+        localStorage.removeItem("djr_user_data")
+      }
     }
     setIsLoading(false)
   }, [])
@@ -68,21 +79,30 @@ export default function Home() {
     }
   }
 
-  const handleLogin = (email: string, password: string) => {
+  const handleLogin = (user: User) => {
     localStorage.setItem("djr_auth", "true")
-    localStorage.setItem("djr_user_email", email)
+    localStorage.setItem("djr_user_data", JSON.stringify(user))
+    setCurrentUser(user)
     setIsAuthenticated(true)
   }
 
   const handleLogout = () => {
     localStorage.removeItem("djr_auth")
-    localStorage.removeItem("djr_user_email")
+    localStorage.removeItem("djr_user_data")
+    setCurrentUser(null)
     setIsAuthenticated(false)
     setCurrentView("transactions")
     setTransactions([])
   }
 
+  const isReadOnly = currentUser?.role === "readonly"
+
   const addTransaction = async (transaction: Omit<Transaction, "id" | "status">) => {
+    if (isReadOnly) {
+      alert("Você não tem permissão para adicionar lançamentos.")
+      return
+    }
+
     try {
       console.log("[v0] Adding transaction:", transaction)
       const result = await addTransactionAction(transaction)
@@ -100,10 +120,15 @@ export default function Home() {
   }
 
   const updateTransaction = async (id: string, transaction: Omit<Transaction, "id" | "status">) => {
+    if (isReadOnly) {
+      alert("Você não tem permissão para editar lançamentos.")
+      return
+    }
+
     try {
       const result = await editTransactionAction(id, transaction)
       if (result) {
-        await loadTransactions() // Reload from database
+        await loadTransactions()
       }
     } catch (error) {
       console.error("[v0] Error updating transaction:", error)
@@ -111,13 +136,18 @@ export default function Home() {
   }
 
   const deleteTransaction = async (id: string) => {
+    if (isReadOnly) {
+      alert("Você não tem permissão para excluir lançamentos.")
+      return
+    }
+
     try {
       const confirmed = confirm("Tem certeza que deseja excluir este lançamento?")
       if (!confirmed) return
 
       const result = await deleteTransactionAction(id)
       if (result) {
-        await loadTransactions() // Reload from database
+        await loadTransactions()
       } else {
         alert("Erro ao excluir lançamento")
       }
@@ -128,6 +158,11 @@ export default function Home() {
   }
 
   const bulkImportTransactions = async (transactions: Omit<Transaction, "id" | "status">[]) => {
+    if (isReadOnly) {
+      alert("Você não tem permissão para importar lançamentos.")
+      return
+    }
+
     try {
       console.log("[v0] Bulk importing", transactions.length, "transactions")
       let successCount = 0
@@ -176,7 +211,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20">
-      <Header currentView={currentView} onViewChange={setCurrentView} onLogout={handleLogout} />
+      <Header currentView={currentView} onViewChange={setCurrentView} onLogout={handleLogout} user={currentUser} />
       <main className="flex-1 pt-20 pb-10 px-6">
         <div className="container mx-auto max-w-7xl py-10">
           {isLoadingTransactions ? (
@@ -191,15 +226,24 @@ export default function Home() {
               onUpdateTransaction={updateTransaction}
               onDeleteTransaction={deleteTransaction}
               onBulkImport={bulkImportTransactions}
+              isReadOnly={isReadOnly}
             />
           ) : currentView === "pendentes" ? (
-            <PendentesView transactions={transactions} onUpdateTransaction={updateTransaction} />
+            <PendentesView
+              transactions={transactions}
+              onUpdateTransaction={updateTransaction}
+              isReadOnly={isReadOnly}
+            />
           ) : currentView === "dashboard" ? (
             <DashboardView transactions={transactions} />
           ) : currentView === "reports" ? (
             <ReportsView transactions={transactions} />
-          ) : (
+          ) : currentView === "settings" && !isReadOnly ? (
             <SettingsView />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Você não tem permissão para acessar esta área.</p>
+            </div>
           )}
         </div>
       </main>

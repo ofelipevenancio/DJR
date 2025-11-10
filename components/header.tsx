@@ -8,9 +8,12 @@ type HeaderProps = {
   currentView: "transactions" | "pendentes" | "dashboard" | "reports" | "settings"
   onViewChange: (view: "transactions" | "pendentes" | "dashboard" | "reports" | "settings") => void
   onLogout?: () => void
+  user?: { email: string; role: string; nome: string | null } | null
 }
 
-export function Header({ currentView, onViewChange, onLogout }: HeaderProps) {
+export function Header({ currentView, onViewChange, onLogout, user }: HeaderProps) {
+  const isReadOnly = user?.role === "readonly"
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-card shadow-sm">
       <div className="container mx-auto px-6">
@@ -62,23 +65,31 @@ export function Header({ currentView, onViewChange, onLogout }: HeaderProps) {
               <FileBarChart className="w-4 h-4" />
               Relatórios
             </Button>
-            <Button
-              variant={currentView === "settings" ? "default" : "ghost"}
-              onClick={() => onViewChange("settings")}
-              className="gap-2 h-11 px-4"
-              size="lg"
-            >
-              <Settings className="w-4 h-4" />
-              Cadastros
-            </Button>
-
-            {onLogout && (
+            {!isReadOnly && (
               <Button
-                variant="ghost"
-                onClick={onLogout}
-                className="gap-2 h-11 px-4 text-muted-foreground hover:text-foreground ml-2 border-l border-border"
+                variant={currentView === "settings" ? "default" : "ghost"}
+                onClick={() => onViewChange("settings")}
+                className="gap-2 h-11 px-4"
                 size="lg"
               >
+                <Settings className="w-4 h-4" />
+                Cadastros
+              </Button>
+            )}
+
+            {user && (
+              <div className="flex items-center gap-2 ml-2 pl-2 border-l border-border">
+                <div className="text-right">
+                  <p className="text-xs font-medium">{user.nome || user.email}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {user.role === "admin" ? "Administrador" : "Visualização"}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {onLogout && (
+              <Button variant="ghost" onClick={onLogout} className="gap-2 h-11 px-4" size="lg">
                 <LogOut className="w-4 h-4" />
                 Sair
               </Button>

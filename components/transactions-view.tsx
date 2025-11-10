@@ -15,6 +15,7 @@ type TransactionsViewProps = {
   onUpdateTransaction: (id: string, transaction: Omit<Transaction, "id" | "status">) => void
   onDeleteTransaction: (id: string) => void
   onBulkImport: (transactions: Omit<Transaction, "id" | "status">[]) => void
+  isReadOnly?: boolean
 }
 
 export function TransactionsView({
@@ -23,10 +24,16 @@ export function TransactionsView({
   onUpdateTransaction,
   onDeleteTransaction,
   onBulkImport,
+  isReadOnly = false,
 }: TransactionsViewProps) {
   const [importing, setImporting] = useState(false)
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) {
+      alert("Você não tem permissão para importar lançamentos.")
+      return
+    }
+
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -35,16 +42,14 @@ export function TransactionsView({
       const text = await file.text()
       const lines = text.split("\n").filter((line) => line.trim())
 
-      // Skip header row
       const dataLines = lines.slice(1)
 
       const importedTransactions: Omit<Transaction, "id" | "status">[] = []
 
       for (const line of dataLines) {
-        // Parse CSV line (handle commas inside quotes)
         const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map((v) => v.replace(/^"|"$/g, "").trim()) || []
 
-        if (values.length < 6) continue // Skip invalid lines
+        if (values.length < 6) continue
 
         const [
           pedido,
@@ -86,7 +91,7 @@ export function TransactionsView({
       alert("Erro ao importar arquivo. Verifique o formato do CSV.")
     } finally {
       setImporting(false)
-      event.target.value = "" // Reset input
+      event.target.value = ""
     }
   }
 
@@ -99,15 +104,17 @@ export function TransactionsView({
         </p>
       </div>
 
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold">Novo Lançamento</CardTitle>
-          <CardDescription className="text-base">Preencha os dados da operação de venda</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TransactionForm onSubmit={onAddTransaction} />
-        </CardContent>
-      </Card>
+      {!isReadOnly && (
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold">Novo Lançamento</CardTitle>
+            <CardDescription className="text-base">Preencha os dados da operação de venda</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TransactionForm onSubmit={onAddTransaction} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="shadow-md">
         <CardHeader>
@@ -116,31 +123,33 @@ export function TransactionsView({
               <CardTitle className="text-xl font-bold">Histórico de Lançamentos</CardTitle>
               <CardDescription className="text-base">Visualize e filtre todas as operações cadastradas</CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const link = document.createElement("a")
-                  link.href = "/template-importacao.csv"
-                  link.download = "template-importacao.csv"
-                  link.click()
-                }}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Baixar Template
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                disabled={importing}
-                onClick={() => document.getElementById("csv-upload")?.click()}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {importing ? "Importando..." : "Importar CSV"}
-              </Button>
-              <input id="csv-upload" type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
-            </div>
+            {!isReadOnly && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const link = document.createElement("a")
+                    link.href = "/template-importacao.csv"
+                    link.download = "template-importacao.csv"
+                    link.click()
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar Template
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={importing}
+                  onClick={() => document.getElementById("csv-upload")?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {importing ? "Importando..." : "Importar CSV"}
+                </Button>
+                <input id="csv-upload" type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -148,6 +157,7 @@ export function TransactionsView({
             transactions={transactions}
             onUpdateTransaction={onUpdateTransaction}
             onDeleteTransaction={onDeleteTransaction}
+            isReadOnly={isReadOnly}
           />
         </CardContent>
       </Card>

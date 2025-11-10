@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -10,16 +9,11 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Eye, EyeOff, Lock, Mail, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import type { User } from "@/lib/auth"
 
 interface LoginScreenProps {
-  onLogin: (email: string, password: string) => void
+  onLogin: (user: User) => void
 }
-
-const VALID_CREDENTIALS = [
-  { email: "adm@djr.com.br", password: "Djr@2025" },
-  { email: "financeiro@djr.com.br", password: "Djr@2025" },
-]
-// </CHANGE>
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [email, setEmail] = useState("")
@@ -27,26 +21,25 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  // </CHANGE>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const { login } = await import("@/app/actions")
+      const user = await login(email, password)
 
-    const isValid = VALID_CREDENTIALS.some(
-      (cred) => cred.email === email.toLowerCase().trim() && cred.password === password,
-    )
-
-    if (isValid) {
-      onLogin(email, password)
-    } else {
-      setError("E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.")
+      if (user) {
+        onLogin(user)
+      } else {
+        setError("E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.")
+      }
+    } catch (error) {
+      console.error("[v0] Login error:", error)
+      setError("Erro ao conectar com o servidor. Tente novamente.")
     }
-    // </CHANGE>
 
     setIsLoading(false)
   }
@@ -79,7 +72,6 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              {/* </CHANGE> */}
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">
@@ -131,8 +123,6 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
-
-            {/* </CHANGE> */}
           </CardContent>
         </Card>
 

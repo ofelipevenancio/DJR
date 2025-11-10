@@ -23,9 +23,10 @@ import { formatDate } from "@/lib/utils"
 type PendentesViewProps = {
   transactions: Transaction[]
   onUpdateTransaction: (id: string, transaction: Omit<Transaction, "id" | "status">) => void
+  isReadOnly?: boolean
 }
 
-export function PendentesView({ transactions, onUpdateTransaction }: PendentesViewProps) {
+export function PendentesView({ transactions, onUpdateTransaction, isReadOnly = false }: PendentesViewProps) {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
@@ -100,6 +101,11 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
   }
 
   const handleOpenPaymentDialog = (transaction: Transaction) => {
+    if (isReadOnly) {
+      alert("Você não tem permissão para dar baixa em lançamentos.")
+      return
+    }
+
     setSelectedTransaction(transaction)
     setPaymentAmount("")
     setPaymentMethod(transaction.paymentMethod || "")
@@ -392,13 +398,13 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
                   <TableHead className="font-bold text-right">Desconto</TableHead>
                   <TableHead className="font-bold text-right">A Receber</TableHead>
                   <TableHead className="font-bold">Status</TableHead>
-                  <TableHead className="font-bold">Ações</TableHead>
+                  {!isReadOnly && <TableHead className="font-bold">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pendingTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={isReadOnly ? 9 : 10} className="text-center py-8 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <CheckCircle2 className="w-12 h-12 text-green-500" />
                         <p className="font-medium">Nenhuma nota pendente encontrada</p>
@@ -437,12 +443,14 @@ export function PendentesView({ transactions, onUpdateTransaction }: PendentesVi
                           {formatCurrency(pendingAmount)}
                         </TableCell>
                         <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-                        <TableCell>
-                          <Button size="sm" onClick={() => handleOpenPaymentDialog(transaction)} className="gap-2">
-                            <CheckCircle2 className="w-4 h-4" />
-                            Dar Baixa
-                          </Button>
-                        </TableCell>
+                        {!isReadOnly && (
+                          <TableCell>
+                            <Button size="sm" onClick={() => handleOpenPaymentDialog(transaction)} className="gap-2">
+                              <CheckCircle2 className="w-4 h-4" />
+                              Dar Baixa
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     )
                   })
