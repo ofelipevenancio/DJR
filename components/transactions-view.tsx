@@ -19,6 +19,8 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle, CheckCircle } from "lucide-react"
 
 type TransactionsViewProps = {
   transactions: Transaction[]
@@ -41,16 +43,69 @@ export function TransactionsView({
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [pasteData, setPasteData] = useState("")
   const [importPreview, setImportPreview] = useState<Omit<Transaction, "id" | "status">[]>([])
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importSuccess, setImportSuccess] = useState<string | null>(null)
+
+  const parseNumber = (val: string) => {
+    if (!val) return 0
+    const cleaned = val
+      .replace(/[R$\s]/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".")
+    return Number.parseFloat(cleaned) || 0
+  }
+
+  const parseDate = (dateStr: string): string => {
+    if (!dateStr) return ""
+
+    // Already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr
+    }
+
+    // DD/MM/YYYY format
+    const brFormat = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+    if (brFormat) {
+      const [, day, month, year] = brFormat
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+    }
+
+    // DD/MM/YY format
+    const shortFormat = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/)
+    if (shortFormat) {
+      const [, day, month, year] = shortFormat
+      const fullYear = Number.parseInt(year) > 50 ? `19${year}` : `20${year}`
+      return `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+    }
+
+    return dateStr
+  }
 
   const parsePastedData = (text: string): Omit<Transaction, "id" | "status">[] => {
+    console.log("[v0] Starting to parse pasted data...")
+
+    setImportError(null)
+    setImportSuccess(null)
+
     const lines = text.split("\n").filter((line) => line.trim())
+    console.log("[v0] Found", lines.length, "lines")
+
     const transactions: Omit<Transaction, "id" | "status">[] = []
 
-    for (const line of lines) {
-      // Split by tab (Excel/Sheets) or semicolon
-      const values = line.includes("\t") ? line.split("\t") : line.split(";")
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
 
-      if (values.length < 5) continue
+      // Split by tab (Excel/Sheets) or semicolon or comma
+      let values: string[]
+      if (line.includes("\t")) {
+        values = line.split("\t")
+      } else if (line.includes(";")) {
+        values = line.split(";")
+      } else {
+        values = line.split(",")
+      }
+
+      if (values.length < 4) continue
 
       const [
         pedido,
@@ -64,17 +119,11 @@ export function TransactionsView({
         forma_recebimento,
         banco_conta,
         observacoes,
-      ] = values.map((v) => v?.trim() || "")
-
-      // Parse numeric values, handling Brazilian format (comma as decimal)
-      const parseNumber = (val: string) => {
-        if (!val) return 0
-        return Number.parseFloat(val.replace(/\./g, "").replace(",", ".")) || 0
-      }
+      ] = values.map((v) => v?.trim().replace(/^"|"$/g, "") || "")
 
       transactions.push({
         orderNumber: pedido || "",
-        saleDate: data || "",
+        saleDate: parseDate(data),
         company: empresa || "",
         client: cliente || "",
         saleValue: parseNumber(valor_vendido),
@@ -87,21 +136,49 @@ export function TransactionsView({
       })
     }
 
+    console.log("[v0] Total transactions parsed:", transactions.length)
     return transactions
   }
 
   const handlePastePreview = () => {
+    console.log("[v0] handlePastePreview called")
+    setImportError(null)
+    setImportSuccess(null)
+
+    if (!pasteData.trim()) {
+      setImportError("Cole os dados do Excel antes de visualizar.")
+      return
+    }
+
     const parsed = parsePastedData(pasteData)
+
+    if (parsed.length === 0) {
+      setImportError("Nenhum dado válido encontrado. Verifique se os dados estão no formato correto.")
+    } else {
+      setImportSuccess(`${parsed.length} lançamento(s) encontrado(s) e pronto(s) para importar.`)
+    }
+
     setImportPreview(parsed)
   }
 
-  const handleConfirmImport = () => {
+  const handleConfirmImport = async () => {
+    console.log("[v0] handleConfirmImport called with", importPreview.length, "items")
+
     if (importPreview.length > 0) {
-      onBulkImport(importPreview)
-      alert(`${importPreview.length} lançamentos importados com sucesso!`)
-      setShowImportDialog(false)
-      setPasteData("")
-      setImportPreview([])
+      try {
+        await onBulkImport(importPreview)
+        setImportSuccess(`${importPreview.length} lançamentos importados com sucesso!`)
+        setTimeout(() => {
+          setShowImportDialog(false)
+          setPasteData("")
+          setImportPreview([])
+          setImportError(null)
+          setImportSuccess(null)
+        }, 1500)
+      } catch (error) {
+        console.error("[v0] Error importing:", error)
+        setImportError(`Erro ao importar: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+      }
     }
   }
 
@@ -131,7 +208,7 @@ export function TransactionsView({
           values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map((v) => v.replace(/^"|"$/g, "").trim()) || []
         }
 
-        if (values.length < 5) continue
+        if (values.length < 4) continue
 
         const [
           pedido,
@@ -147,15 +224,9 @@ export function TransactionsView({
           observacoes,
         ] = values
 
-        // Parse numeric values, handling Brazilian format
-        const parseNumber = (val: string) => {
-          if (!val) return 0
-          return Number.parseFloat(val.replace(/\./g, "").replace(",", ".")) || 0
-        }
-
         importedTransactions.push({
           orderNumber: pedido || "",
-          saleDate: data || "",
+          saleDate: parseDate(data),
           company: empresa || "",
           client: cliente || "",
           saleValue: parseNumber(valor_vendido),
@@ -263,6 +334,20 @@ export function TransactionsView({
             </DialogDescription>
           </DialogHeader>
 
+          {importError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{importError}</AlertDescription>
+            </Alert>
+          )}
+
+          {importSuccess && (
+            <Alert className="border-green-500 bg-green-50 text-green-700">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>{importSuccess}</AlertDescription>
+            </Alert>
+          )}
+
           <Tabs defaultValue="paste" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="paste">Colar Dados</TabsTrigger>
@@ -274,14 +359,21 @@ export function TransactionsView({
                 <Label htmlFor="paste-area">Dados (copie do Excel e cole aqui)</Label>
                 <Textarea
                   id="paste-area"
-                  placeholder="Cole aqui os dados copiados do Excel ou Google Sheets...
-                  
-Exemplo:
-001	2025-01-15	Klabin	Cliente A	1500,00	NF-001	1500,00	1500,00	PIX	Sicoob Aracoop	
-002	2025-01-16	Jaepel	Cliente B	2000,00	NF-002	2000,00	0	Boleto		Aguardando"
+                  placeholder={`Cole aqui os dados copiados do Excel ou Google Sheets...
+
+Formato: Pedido | Data | Empresa | Cliente | Valor Vendido | NF | Total NF | Recebido | Forma Pgto | Banco | Obs
+
+Exemplo (copie as linhas abaixo para testar):
+001	15/01/2025	Klabin	Cliente A	1500,00	NF-001	1500,00	1500,00	PIX	Sicoob Aracoop	
+002	16/01/2025	Jaepel	Cliente B	2000,00	NF-002	2000,00	0	Boleto		Aguardando`}
                   className="min-h-[200px] font-mono text-sm"
                   value={pasteData}
-                  onChange={(e) => setPasteData(e.target.value)}
+                  onChange={(e) => {
+                    setPasteData(e.target.value)
+                    setImportError(null)
+                    setImportSuccess(null)
+                    setImportPreview([])
+                  }}
                 />
               </div>
 
@@ -390,6 +482,8 @@ Exemplo:
                 setShowImportDialog(false)
                 setPasteData("")
                 setImportPreview([])
+                setImportError(null)
+                setImportSuccess(null)
               }}
             >
               Cancelar
