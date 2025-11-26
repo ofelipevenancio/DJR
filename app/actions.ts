@@ -223,6 +223,23 @@ export async function deleteTransaction(id: string) {
   }
 }
 
+export async function bulkDeleteTransactions(ids: string[]) {
+  try {
+    console.log("[v0] Bulk deleting transactions:", ids.length)
+
+    for (const id of ids) {
+      await deleteTransactionDb(id)
+    }
+
+    console.log("[v0] Bulk delete completed")
+    revalidatePath("/")
+    return { success: true, deleted: ids.length }
+  } catch (error) {
+    console.error("[v0] Error in bulkDeleteTransactions:", error)
+    throw error
+  }
+}
+
 export async function fetchEmpresas(): Promise<MasterDataItem[]> {
   try {
     return await getEmpresas()

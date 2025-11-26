@@ -28,6 +28,7 @@ type TransactionsViewProps = {
   onUpdateTransaction: (id: string, transaction: Omit<Transaction, "id" | "status">) => void
   onDeleteTransaction: (id: string) => void
   onBulkImport: (transactions: Omit<Transaction, "id" | "status">[]) => void
+  onBulkDelete: (ids: string[]) => void
   isReadOnly?: boolean
 }
 
@@ -37,6 +38,7 @@ export function TransactionsView({
   onUpdateTransaction,
   onDeleteTransaction,
   onBulkImport,
+  onBulkDelete,
   isReadOnly = false,
 }: TransactionsViewProps) {
   const [importing, setImporting] = useState(false)
@@ -320,6 +322,7 @@ export function TransactionsView({
             transactions={transactions}
             onUpdateTransaction={onUpdateTransaction}
             onDeleteTransaction={onDeleteTransaction}
+            onBulkDelete={onBulkDelete}
             isReadOnly={isReadOnly}
           />
         </CardContent>

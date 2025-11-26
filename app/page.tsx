@@ -15,6 +15,7 @@ import {
   addTransaction as addTransactionAction,
   editTransaction as editTransactionAction,
   deleteTransaction as deleteTransactionAction,
+  bulkDeleteTransactions as bulkDeleteAction,
 } from "./actions"
 
 export type Transaction = {
@@ -194,6 +195,25 @@ export default function Home() {
     }
   }
 
+  const bulkDeleteTransactions = async (ids: string[]) => {
+    if (isReadOnly) {
+      alert("Você não tem permissão para excluir lançamentos.")
+      return
+    }
+
+    try {
+      console.log("[v0] Bulk deleting", ids.length, "transactions")
+      const result = await bulkDeleteAction(ids)
+      if (result.success) {
+        console.log("[v0] Bulk delete complete:", result.deleted, "deleted")
+        await loadTransactions()
+      }
+    } catch (error) {
+      console.error("[v0] Error in bulk delete:", error)
+      alert("Erro ao excluir lançamentos em massa")
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
@@ -226,6 +246,7 @@ export default function Home() {
               onUpdateTransaction={updateTransaction}
               onDeleteTransaction={deleteTransaction}
               onBulkImport={bulkImportTransactions}
+              onBulkDelete={bulkDeleteTransactions}
               isReadOnly={isReadOnly}
             />
           ) : currentView === "pendentes" ? (
