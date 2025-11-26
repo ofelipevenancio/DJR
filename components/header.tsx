@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { LogOut, FileText, Clock, LayoutDashboard, FileBarChart, Settings } from "lucide-react"
 import Image from "next/image"
+import { MobileSidebar } from "@/components/mobile-sidebar"
 
 type HeaderProps = {
   currentView: "transactions" | "pendentes" | "dashboard" | "reports" | "settings"
@@ -16,19 +17,27 @@ export function Header({ currentView, onViewChange, onLogout, user }: HeaderProp
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-card shadow-sm">
-      <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between h-20">
-          <div className="flex items-center gap-4">
-            <div className="relative w-16 h-16">
-              <Image src="/logo.png" alt="DJR Reciclagem" fill className="object-contain" priority />
-            </div>
-            <div className="border-l border-border pl-4">
-              <h1 className="text-xl font-bold text-foreground leading-tight">Controle de Notas - DJR Recicláveis</h1>
-              <p className="text-sm text-muted-foreground">Sistema de Auditoria de Vendas</p>
+      <div className="container mx-auto px-4 lg:px-6">
+        <div className="flex items-center justify-between h-16 lg:h-20">
+          <div className="flex items-center gap-2 lg:gap-4">
+            <MobileSidebar currentView={currentView} onViewChange={onViewChange} onLogout={onLogout} user={user} />
+
+            <div className="flex items-center gap-2 lg:gap-4">
+              <div className="relative w-10 h-10 lg:w-16 lg:h-16">
+                <Image src="/logo.png" alt="DJR Reciclagem" fill className="object-contain" priority />
+              </div>
+              <div className="border-l border-border pl-2 lg:pl-4">
+                <h1 className="text-sm lg:text-xl font-bold text-foreground leading-tight">
+                  <span className="hidden sm:inline">Controle de Notas - </span>DJR Recicláveis
+                </h1>
+                <p className="text-xs lg:text-sm text-muted-foreground hidden sm:block">
+                  Sistema de Auditoria de Vendas
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
             <Button
               variant={currentView === "transactions" ? "default" : "ghost"}
               onClick={() => onViewChange("transactions")}
@@ -93,6 +102,15 @@ export function Header({ currentView, onViewChange, onLogout, user }: HeaderProp
                 <LogOut className="w-4 h-4" />
                 Sair
               </Button>
+            )}
+          </div>
+
+          <div className="flex lg:hidden items-center gap-2">
+            {user && (
+              <div className="text-right mr-1">
+                <p className="text-xs font-medium truncate max-w-[100px]">{user.nome || user.email.split("@")[0]}</p>
+                <p className="text-[10px] text-muted-foreground">{user.role === "admin" ? "Admin" : "Visualização"}</p>
+              </div>
             )}
           </div>
         </div>

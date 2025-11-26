@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { CheckCircle2, AlertCircle, Clock, AlertTriangle, Pencil, Trash2 } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { CheckCircle2, AlertCircle, Clock, AlertTriangle, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 import type { Transaction } from "@/app/page"
 import { EditTransactionDialog } from "@/components/edit-transaction-dialog"
 import { formatDate } from "@/lib/utils"
@@ -27,6 +28,165 @@ type TransactionsTableProps = {
   onDeleteTransaction: (id: string) => void
   onBulkDelete?: (ids: string[]) => void
   isReadOnly?: boolean
+}
+
+function MobileTransactionCard({
+  transaction,
+  onEdit,
+  onDelete,
+  isReadOnly,
+  isSelected,
+  onSelect,
+}: {
+  transaction: Transaction
+  onEdit: () => void
+  onDelete: () => void
+  isReadOnly: boolean
+  isSelected: boolean
+  onSelect: (checked: boolean) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  const getStatusConfig = (status: Transaction["status"]) => {
+    switch (status) {
+      case "received":
+        return {
+          label: "Recebido",
+          className: "bg-status-received text-status-received-foreground",
+          icon: CheckCircle2,
+        }
+      case "partial":
+        return {
+          label: "Parcial",
+          className: "bg-status-partial text-status-partial-foreground",
+          icon: Clock,
+        }
+      case "pending":
+        return {
+          label: "Pendente",
+          className: "bg-status-pending text-status-pending-foreground",
+          icon: AlertCircle,
+        }
+      case "divergent":
+        return {
+          label: "Divergente",
+          className: "bg-status-divergent text-status-divergent-foreground",
+          icon: AlertTriangle,
+        }
+    }
+  }
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
+  }
+
+  const statusConfig = getStatusConfig(transaction.status)
+  const StatusIcon = statusConfig.icon
+  const difference = transaction.totalReceived - transaction.saleValue
+
+  return (
+    <Card className={`mb-3 ${isSelected ? "ring-2 ring-primary" : ""}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          {!isReadOnly && <Checkbox checked={isSelected} onCheckedChange={onSelect} className="mt-1" />}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm">{transaction.orderNumber}</span>
+                <Badge variant="outline" className="text-xs">
+                  {transaction.company}
+                </Badge>
+              </div>
+              <Badge className={`${statusConfig.className} text-xs`}>
+                <StatusIcon className="w-3 h-3 mr-1" />
+                {statusConfig.label}
+              </Badge>
+            </div>
+
+            <div className="text-sm text-muted-foreground mb-2">
+              {formatDate(transaction.saleDate)} • {transaction.client}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-muted-foreground">Valor: </span>
+                <span className="font-medium">{formatCurrency(transaction.saleValue)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Recebido: </span>
+                <span className="font-medium">{formatCurrency(transaction.totalReceived)}</span>
+              </div>
+            </div>
+
+            {expanded && (
+              <div className="mt-3 pt-3 border-t space-y-2 text-sm">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-muted-foreground">Total NF: </span>
+                    <span>{formatCurrency(transaction.invoiceTotal)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Diferença: </span>
+                    <span className={difference >= 0 ? "text-green-600" : "text-red-600"}>
+                      {formatCurrency(difference)}
+                    </span>
+                  </div>
+                </div>
+                {transaction.invoiceNumbers && (
+                  <div>
+                    <span className="text-muted-foreground">NF(s): </span>
+                    <span>{transaction.invoiceNumbers}</span>
+                  </div>
+                )}
+                {transaction.paymentMethod && (
+                  <div>
+                    <span className="text-muted-foreground">Forma Pgto: </span>
+                    <span>{transaction.paymentMethod}</span>
+                  </div>
+                )}
+                {transaction.observations && (
+                  <div>
+                    <span className="text-muted-foreground">Obs: </span>
+                    <span>{transaction.observations}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mt-3 pt-2 border-t">
+              <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)} className="text-xs h-8 px-2">
+                {expanded ? (
+                  <>
+                    <ChevronUp className="w-4 h-4 mr-1" /> Menos
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-1" /> Mais
+                  </>
+                )}
+              </Button>
+
+              {!isReadOnly && (
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={onEdit} className="h-8 w-8 p-0">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onDelete}
+                    className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 export function TransactionsTable({
@@ -120,12 +280,12 @@ export function TransactionsTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-foreground">Filtrar por empresa:</label>
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <label className="text-sm font-medium text-foreground whitespace-nowrap">Filtrar por empresa:</label>
             <Select value={companyFilter} onValueChange={setCompanyFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -138,10 +298,10 @@ export function TransactionsTable({
             </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-foreground">Filtrar por status:</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <label className="text-sm font-medium text-foreground whitespace-nowrap">Filtrar por status:</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -156,14 +316,46 @@ export function TransactionsTable({
         </div>
 
         {!isReadOnly && selectedIds.size > 0 && (
-          <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full sm:w-auto"
+          >
             <Trash2 className="h-4 w-4 mr-2" />
             Excluir Selecionados ({selectedIds.size})
           </Button>
         )}
       </div>
 
-      <div className="rounded-lg border border-border overflow-hidden">
+      <div className="block lg:hidden">
+        {!isReadOnly && filteredTransactions.length > 0 && (
+          <div className="flex items-center gap-2 mb-3 p-3 bg-muted/50 rounded-lg">
+            <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} aria-label="Selecionar todos" />
+            <span className="text-sm text-muted-foreground">
+              {isAllSelected ? "Desmarcar todos" : "Selecionar todos"}
+            </span>
+          </div>
+        )}
+
+        {filteredTransactions.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">Nenhum lançamento encontrado</div>
+        ) : (
+          filteredTransactions.map((transaction) => (
+            <MobileTransactionCard
+              key={transaction.id}
+              transaction={transaction}
+              onEdit={() => setEditingTransaction(transaction)}
+              onDelete={() => onDeleteTransaction(transaction.id)}
+              isReadOnly={isReadOnly}
+              isSelected={selectedIds.has(transaction.id)}
+              onSelect={(checked) => handleSelectOne(transaction.id, checked)}
+            />
+          ))
+        )}
+      </div>
+
+      <div className="hidden lg:block rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

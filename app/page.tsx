@@ -222,8 +222,8 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/20">
       <Header currentView={currentView} onViewChange={setCurrentView} onLogout={handleLogout} user={currentUser} />
-      <main className="flex-1 pt-20 pb-10 px-6">
-        <div className="container mx-auto max-w-7xl py-10">
+      <main className="flex-1 pt-16 lg:pt-20 pb-6 lg:pb-10 px-3 lg:px-6">
+        <div className="container mx-auto max-w-7xl py-4 lg:py-10">
           {isLoadingTransactions ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>

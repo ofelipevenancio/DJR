@@ -62,11 +62,8 @@ export function TransactionsView({
 
     const cleanDate = dateStr.trim()
 
-    console.log("[v0] parseDate input:", cleanDate)
-
     // Already in YYYY-MM-DD format
     if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
-      console.log("[v0] Date already in YYYY-MM-DD format:", cleanDate)
       return cleanDate
     }
 
@@ -74,9 +71,7 @@ export function TransactionsView({
     const brFormat = cleanDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
     if (brFormat) {
       const [, day, month, year] = brFormat
-      const result = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
-      console.log("[v0] Converted DD/MM/YYYY to:", result)
-      return result
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
     }
 
     // DD/MM/YY format
@@ -84,30 +79,23 @@ export function TransactionsView({
     if (shortFormat) {
       const [, day, month, year] = shortFormat
       const fullYear = Number.parseInt(year) > 50 ? `19${year}` : `20${year}`
-      const result = `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
-      console.log("[v0] Converted DD/MM/YY to:", result)
-      return result
+      return `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
     }
 
-    console.log("[v0] Date format not recognized, returning as-is:", cleanDate)
     return cleanDate
   }
 
   const parsePastedData = (text: string): Omit<Transaction, "id" | "status">[] => {
-    console.log("[v0] Starting to parse pasted data...")
-
     setImportError(null)
     setImportSuccess(null)
 
     const lines = text.split("\n").filter((line) => line.trim())
-    console.log("[v0] Found", lines.length, "lines")
 
     const transactions: Omit<Transaction, "id" | "status">[] = []
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
 
-      // Split by tab (Excel/Sheets) or semicolon or comma
       let values: string[]
       if (line.includes("\t")) {
         values = line.split("\t")
@@ -148,12 +136,10 @@ export function TransactionsView({
       })
     }
 
-    console.log("[v0] Total transactions parsed:", transactions.length)
     return transactions
   }
 
   const handlePastePreview = () => {
-    console.log("[v0] handlePastePreview called")
     setImportError(null)
     setImportSuccess(null)
 
@@ -174,8 +160,6 @@ export function TransactionsView({
   }
 
   const handleConfirmImport = async () => {
-    console.log("[v0] handleConfirmImport called with", importPreview.length, "items")
-
     if (importPreview.length > 0) {
       setImportError(null)
       setImportSuccess(null)
@@ -184,7 +168,6 @@ export function TransactionsView({
         setImportSuccess(`Importando ${importPreview.length} lançamentos...`)
         await onBulkImport(importPreview)
 
-        // O feedback de sucesso/erro agora vem do alert da função pai
         setTimeout(() => {
           setShowImportDialog(false)
           setPasteData("")
@@ -272,19 +255,19 @@ export function TransactionsView({
   }
 
   return (
-    <div className="space-y-8 py-2">
-      <div className="border-b border-border pb-6">
-        <h2 className="text-4xl font-bold text-foreground mb-3 tracking-tight">Lançamentos</h2>
-        <p className="text-base text-muted-foreground">
+    <div className="space-y-6 lg:space-y-8 py-2">
+      <div className="border-b border-border pb-4 lg:pb-6">
+        <h2 className="text-2xl lg:text-4xl font-bold text-foreground mb-2 lg:mb-3 tracking-tight">Lançamentos</h2>
+        <p className="text-sm lg:text-base text-muted-foreground">
           Cadastre e visualize todas as operações de venda e recebimento
         </p>
       </div>
 
       {!isReadOnly && (
         <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold">Novo Lançamento</CardTitle>
-            <CardDescription className="text-base">Preencha os dados da operação de venda</CardDescription>
+          <CardHeader className="pb-4 lg:pb-6">
+            <CardTitle className="text-lg lg:text-xl font-bold">Novo Lançamento</CardTitle>
+            <CardDescription className="text-sm lg:text-base">Preencha os dados da operação de venda</CardDescription>
           </CardHeader>
           <CardContent>
             <TransactionForm onSubmit={onAddTransaction} />
@@ -293,17 +276,20 @@ export function TransactionsView({
       )}
 
       <Card className="shadow-md">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-4 lg:pb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <CardTitle className="text-xl font-bold">Histórico de Lançamentos</CardTitle>
-              <CardDescription className="text-base">Visualize e filtre todas as operações cadastradas</CardDescription>
+              <CardTitle className="text-lg lg:text-xl font-bold">Histórico de Lançamentos</CardTitle>
+              <CardDescription className="text-sm lg:text-base">
+                Visualize e filtre todas as operações cadastradas
+              </CardDescription>
             </div>
             {!isReadOnly && (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant="outline"
                   size="sm"
+                  className="w-full sm:w-auto bg-transparent"
                   onClick={() => {
                     const link = document.createElement("a")
                     link.href = "/template-importacao.csv"
@@ -314,13 +300,19 @@ export function TransactionsView({
                   <Download className="h-4 w-4 mr-2" />
                   Baixar Template
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto bg-transparent"
+                  onClick={() => setShowImportDialog(true)}
+                >
                   <ClipboardPaste className="h-4 w-4 mr-2" />
                   Colar do Excel
                 </Button>
                 <Button
                   variant="default"
                   size="sm"
+                  className="w-full sm:w-auto"
                   disabled={importing}
                   onClick={() => document.getElementById("csv-upload")?.click()}
                 >
@@ -332,7 +324,7 @@ export function TransactionsView({
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6">
           <TransactionsTable
             transactions={transactions}
             onUpdateTransaction={onUpdateTransaction}
@@ -344,7 +336,7 @@ export function TransactionsView({
       </Card>
 
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Importar Lançamentos</DialogTitle>
             <DialogDescription>
@@ -384,7 +376,7 @@ Formato: Pedido | Data | Empresa | Cliente | Valor Vendido | NF | Total NF | Rec
 Exemplo (copie as linhas abaixo para testar):
 001	15/01/2025	Klabin	Cliente A	1500,00	NF-001	1500,00	1500,00	PIX	Sicoob Aracoop	
 002	16/01/2025	Jaepel	Cliente B	2000,00	NF-002	2000,00	0	Boleto		Aguardando`}
-                  className="min-h-[200px] font-mono text-sm"
+                  className="min-h-[150px] lg:min-h-[200px] font-mono text-sm"
                   value={pasteData}
                   onChange={(e) => {
                     setPasteData(e.target.value)
@@ -400,31 +392,29 @@ Exemplo (copie as linhas abaixo para testar):
               </Button>
 
               {importPreview.length > 0 && (
-                <div className="border rounded-lg p-4 space-y-2">
+                <div className="border rounded-lg p-3 lg:p-4 space-y-2">
                   <h4 className="font-semibold text-sm">Prévia: {importPreview.length} lançamento(s) encontrado(s)</h4>
-                  <div className="max-h-[200px] overflow-y-auto">
+                  <div className="max-h-[150px] lg:max-h-[200px] overflow-y-auto">
                     <table className="w-full text-xs">
                       <thead className="bg-muted">
                         <tr>
                           <th className="p-2 text-left">Pedido</th>
-                          <th className="p-2 text-left">Data</th>
+                          <th className="p-2 text-left hidden sm:table-cell">Data</th>
                           <th className="p-2 text-left">Empresa</th>
-                          <th className="p-2 text-left">Cliente</th>
+                          <th className="p-2 text-left hidden sm:table-cell">Cliente</th>
                           <th className="p-2 text-right">Valor</th>
-                          <th className="p-2 text-left">NF</th>
                         </tr>
                       </thead>
                       <tbody>
                         {importPreview.slice(0, 10).map((t, i) => (
                           <tr key={i} className="border-t">
                             <td className="p-2">{t.orderNumber}</td>
-                            <td className="p-2">{t.saleDate}</td>
+                            <td className="p-2 hidden sm:table-cell">{t.saleDate}</td>
                             <td className="p-2">{t.company}</td>
-                            <td className="p-2">{t.client}</td>
+                            <td className="p-2 hidden sm:table-cell">{t.client}</td>
                             <td className="p-2 text-right">
                               {t.saleValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                             </td>
-                            <td className="p-2">{t.invoiceNumbers}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -440,14 +430,14 @@ Exemplo (copie as linhas abaixo para testar):
             </TabsContent>
 
             <TabsContent value="instructions" className="space-y-4">
-              <div className="bg-muted rounded-lg p-4 space-y-3">
-                <h4 className="font-semibold">Formato esperado das colunas:</h4>
-                <ol className="list-decimal list-inside space-y-1 text-sm">
+              <div className="bg-muted rounded-lg p-3 lg:p-4 space-y-3">
+                <h4 className="font-semibold text-sm lg:text-base">Formato esperado das colunas:</h4>
+                <ol className="list-decimal list-inside space-y-1 text-xs lg:text-sm">
                   <li>
                     <strong>Nº Pedido</strong> - Número do pedido
                   </li>
                   <li>
-                    <strong>Data</strong> - Data da venda (YYYY-MM-DD ou DD/MM/YYYY)
+                    <strong>Data</strong> - Data da venda (DD/MM/YYYY)
                   </li>
                   <li>
                     <strong>Empresa</strong> - Nome da empresa
@@ -477,25 +467,14 @@ Exemplo (copie as linhas abaixo para testar):
                     <strong>Observações</strong> - Observações adicionais
                   </li>
                 </ol>
-
-                <div className="mt-4 pt-4 border-t">
-                  <h4 className="font-semibold mb-2">Como usar:</h4>
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Abra sua planilha no Excel ou Google Sheets</li>
-                    <li>Selecione as linhas que deseja importar (sem cabeçalho)</li>
-                    <li>Copie (Ctrl+C ou Cmd+C)</li>
-                    <li>Cole na área de texto acima (Ctrl+V ou Cmd+V)</li>
-                    <li>Clique em &quot;Visualizar Dados&quot; para conferir</li>
-                    <li>Clique em &quot;Importar&quot; para confirmar</li>
-                  </ol>
-                </div>
               </div>
             </TabsContent>
           </Tabs>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
+              className="w-full sm:w-auto bg-transparent"
               onClick={() => {
                 setShowImportDialog(false)
                 setPasteData("")
@@ -506,7 +485,7 @@ Exemplo (copie as linhas abaixo para testar):
             >
               Cancelar
             </Button>
-            <Button onClick={handleConfirmImport} disabled={importPreview.length === 0}>
+            <Button className="w-full sm:w-auto" onClick={handleConfirmImport} disabled={importPreview.length === 0}>
               Importar {importPreview.length > 0 ? `(${importPreview.length})` : ""}
             </Button>
           </DialogFooter>
