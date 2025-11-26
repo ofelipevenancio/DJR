@@ -60,27 +60,37 @@ export function TransactionsView({
   const parseDate = (dateStr: string): string => {
     if (!dateStr) return ""
 
+    const cleanDate = dateStr.trim()
+
+    console.log("[v0] parseDate input:", cleanDate)
+
     // Already in YYYY-MM-DD format
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return dateStr
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+      console.log("[v0] Date already in YYYY-MM-DD format:", cleanDate)
+      return cleanDate
     }
 
     // DD/MM/YYYY format
-    const brFormat = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+    const brFormat = cleanDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
     if (brFormat) {
       const [, day, month, year] = brFormat
-      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+      const result = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+      console.log("[v0] Converted DD/MM/YYYY to:", result)
+      return result
     }
 
     // DD/MM/YY format
-    const shortFormat = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/)
+    const shortFormat = cleanDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/)
     if (shortFormat) {
       const [, day, month, year] = shortFormat
       const fullYear = Number.parseInt(year) > 50 ? `19${year}` : `20${year}`
-      return `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+      const result = `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+      console.log("[v0] Converted DD/MM/YY to:", result)
+      return result
     }
 
-    return dateStr
+    console.log("[v0] Date format not recognized, returning as-is:", cleanDate)
+    return cleanDate
   }
 
   const parsePastedData = (text: string): Omit<Transaction, "id" | "status">[] => {
@@ -167,16 +177,21 @@ export function TransactionsView({
     console.log("[v0] handleConfirmImport called with", importPreview.length, "items")
 
     if (importPreview.length > 0) {
+      setImportError(null)
+      setImportSuccess(null)
+
       try {
+        setImportSuccess(`Importando ${importPreview.length} lançamentos...`)
         await onBulkImport(importPreview)
-        setImportSuccess(`${importPreview.length} lançamentos importados com sucesso!`)
+
+        // O feedback de sucesso/erro agora vem do alert da função pai
         setTimeout(() => {
           setShowImportDialog(false)
           setPasteData("")
           setImportPreview([])
           setImportError(null)
           setImportSuccess(null)
-        }, 1500)
+        }, 500)
       } catch (error) {
         console.error("[v0] Error importing:", error)
         setImportError(`Erro ao importar: ${error instanceof Error ? error.message : "Erro desconhecido"}`)

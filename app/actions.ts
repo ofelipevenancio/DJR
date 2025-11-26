@@ -365,3 +365,109 @@ export async function removeFormaRecebimento(id: string) {
     return false
   }
 }
+
+export async function bulkImportTransactions(transactions: Omit<Transaction, "id" | "status">[]) {
+  try {
+    console.log("[v0] Server: Bulk importing", transactions.length, "transactions")
+
+    let successCount = 0
+    let errorCount = 0
+    const errors: string[] = []
+
+    const convertDate = (dateStr: string): string => {
+      if (!dateStr) return ""
+
+      const cleanDate = dateStr.trim()
+
+      // Already in YYYY-MM-DD format
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+        return cleanDate
+      }
+
+      // DD/MM/YYYY format
+      const brFormat = cleanDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+      if (brFormat) {
+        const [, day, month, year] = brFormat
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+      }
+
+      // DD/MM/YY format
+      const shortFormat = cleanDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/)
+      if (shortFormat) {
+        const [, day, month, year] = shortFormat
+        const fullYear = Number.parseInt(year) > 50 ? `19${year}` : `20${year}`
+        return `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+      }
+
+      return cleanDate
+    }
+
+    for (const transaction of transactions) {
+      try {
+        // Validate required fields
+        if (!transaction.orderNumber && !transaction.client && !transaction.company) {
+          errors.push(`Linha inválida: dados insuficientes`)
+          errorCount++
+          continue
+        }
+
+        const convertedDate = convertDate(transaction.saleDate)
+        console.log("[v0] Server: Converting date from", transaction.saleDate, "to", convertedDate)
+
+        // Calculate status
+        const saleValue = transaction.saleValue || 0
+        const totalReceived = transaction.totalReceived || 0
+
+        let status: Transaction["status"]
+
+        if (saleValue === 0 && totalReceived === 0) {
+          status = "pending"
+        } else if (totalReceived >= saleValue && saleValue > 0) {
+          status = "received"
+        } else if (totalReceived > 0 && totalReceived < saleValue) {
+          status = "partial"
+        } else if (totalReceived === 0 && saleValue > 0) {
+          status = "pending"
+        } else {
+          status = "divergent"
+        }
+
+        const transactionWithConvertedDate = {
+          ...transaction,
+          saleDate: convertedDate,
+        }
+
+        const result = await createTransaction(transactionWithConvertedDate, status)
+        if (result) {
+          successCount++
+        } else {
+          errors.push(`Erro ao salvar: ${transaction.orderNumber || "sem pedido"}`)
+          errorCount++
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "Erro desconhecido"
+        errors.push(`${transaction.saleDate}: ${errorMsg}`)
+        errorCount++
+        console.error("[v0] Error importing single transaction:", error)
+      }
+    }
+
+    console.log(`[v0] Server: Bulk import completed - ${successCount} success, ${errorCount} errors`)
+
+    if (errors.length > 0) {
+      console.log("[v0] Server: First 5 errors:", errors.slice(0, 5))
+    }
+
+    revalidatePath("/")
+
+    return {
+      success: true,
+      successCount,
+      errorCount,
+      errors: errors.slice(0, 10), // Return first 10 errors for display
+    }
+  } catch (error) {
+    console.error("[v0] Server: Error in bulkImportTransactions:", error)
+    throw error
+  }
+}
